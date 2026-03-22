@@ -1,0 +1,1825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIO — AI Voice Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ── Reset & Base ── */
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; }
+    body { background: #f1f5f9; min-height: 100vh; padding: 0; }
+
+    /* ── App Shell ── */
+    .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+    .app-topbar { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 0 32px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(15,23,42,.06); }
+    .topbar-left { display: flex; align-items: center; gap: 32px; }
+    .app-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .brand-icon { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg,#4f46e5,#7c3aed); display: flex; align-items: center; justify-content: center; }
+    .brand-name { font-size: 15px; font-weight: 700; color: #0f172a; letter-spacing: -.03em; }
+    .brand-name span { color: #4f46e5; }
+    .topbar-nav { display: flex; align-items: center; gap: 4px; }
+    .tnav-item { padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; color: #64748b; cursor: pointer; border: none; background: none; transition: all .15s; }
+    .tnav-item:hover { background: #f8fafc; color: #0f172a; }
+    .tnav-item.active { background: #eef2ff; color: #4f46e5; font-weight: 600; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .topbar-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,#e0e7ff,#c7d2fe); color: #4338ca; font-size: 11.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .topbar-org { font-size: 12.5px; font-weight: 600; color: #334155; }
+
+    /* ── Page Wrapper ── */
+    .page-body { flex: 1; padding: 28px 32px 48px; max-width: 1240px; margin: 0 auto; width: 100%; }
+
+    /* ── Tab navigation (page-level) ── */
+    .tab-bar { display: flex; gap: 0; border-bottom: 1px solid #e2e8f0; margin-bottom: 0; }
+    .tab-btn { padding: 11px 20px; border: none; border-bottom: 2px solid transparent; background: transparent; font-size: 13px; font-weight: 500; color: #64748b; cursor: pointer; transition: all .15s; margin-bottom: -1px; letter-spacing: -.01em; }
+    .tab-btn.active { color: #4f46e5; border-bottom-color: #4f46e5; font-weight: 600; }
+    .tab-btn:hover:not(.active) { color: #334155; background: #f8fafc; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ════════════════════════════════
+       TAB 1 — DEPLOY / RETRY MODAL
+    ════════════════════════════════ */
+    .t1-outer { display: flex; justify-content: center; padding-top: 32px; }
+    .modal { width: 680px; background: #fff; border-radius: 14px; box-shadow: 0 4px 6px -1px rgba(15,23,42,.07), 0 2px 4px -2px rgba(15,23,42,.05), 0 0 0 1px rgba(15,23,42,.06); display: flex; flex-direction: column; overflow: hidden; }
+
+    .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 18px; border-bottom: 1px solid #f1f5f9; }
+    .header-left { display: flex; align-items: center; gap: 14px; }
+    .header-icon { width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg,#4f46e5,#7c3aed); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 8px rgba(79,70,229,.3); }
+    .header-icon svg { width: 20px; height: 20px; }
+    .header-title { font-size: 16px; font-weight: 700; color: #0f172a; line-height: 1.2; letter-spacing: -.02em; }
+    .header-sub { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+    .close-btn { background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 20px; padding: 4px 8px; border-radius: 6px; line-height: 1; }
+    .close-btn:hover { color: #334155; background: #f1f5f9; }
+
+    .steps-bar { display: flex; align-items: center; padding: 16px 24px; border-bottom: 1px solid #f1f5f9; background: #fafbfd; }
+    .step { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+    .step-circle { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; flex-shrink: 0; }
+    .step.done .step-circle   { background: #059669; color: #fff; }
+    .step.active .step-circle { background: #4f46e5; color: #fff; box-shadow: 0 0 0 3px #e0e7ff; }
+    .step.pending .step-circle{ background: #f1f5f9; color: #94a3b8; border: 1.5px solid #e2e8f0; }
+    .step-label { font-size: 12.5px; font-weight: 600; }
+    .step.done .step-label    { color: #059669; }
+    .step.active .step-label  { color: #4f46e5; }
+    .step.pending .step-label { color: #94a3b8; }
+    .step-line { flex: 1; height: 1.5px; margin: 0 10px; }
+    .step-line.done    { background: #059669; }
+    .step-line.pending { background: #e2e8f0; }
+
+    .info-bar { display: flex; align-items: center; justify-content: space-between; margin: 16px 24px 0; padding: 12px 16px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; }
+    .ib-left { display: flex; align-items: center; gap: 12px; }
+    .ib-records { font-size: 13px; font-weight: 700; color: #0f172a; }
+    .ib-cost { font-size: 12px; color: #64748b; margin-top: 1px; }
+    .ib-cost strong { font-weight: 700; color: #0f172a; }
+    .btn-setup { background: #059669; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn-setup:hover { background: #047857; }
+    .ib-avail { font-size: 12px; color: #64748b; }
+    .ib-avail strong { font-weight: 700; color: #0f172a; }
+
+    .modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; max-height: calc(100vh - 280px); }
+    .section { margin-bottom: 20px; }
+    .section-title { display: flex; align-items: center; gap: 9px; font-size: 13.5px; font-weight: 700; color: #0f172a; margin-bottom: 5px; letter-spacing: -.01em; }
+    .section-dot { width: 8px; height: 8px; border-radius: 50%; background: #4f46e5; flex-shrink: 0; }
+    .section-sub { font-size: 12px; color: #64748b; margin-bottom: 12px; margin-left: 17px; line-height: 1.55; }
+    .divider { border: none; border-top: 1px solid #f1f5f9; margin: 16px 0; }
+
+    .agent-wrap { position: relative; }
+    .agent-wrap input { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 10px 44px 10px 13px; font-size: 13px; color: #334155; outline: none; background: #fff; transition: border-color .15s; }
+    .agent-wrap input:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px #e0e7ff; }
+    .agent-actions { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 8px; }
+    .a-x { color: #94a3b8; font-size: 15px; cursor: pointer; }
+
+    .skipped-banner { display: flex; align-items: center; gap: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 11px 16px; font-size: 13px; color: #047857; font-weight: 500; }
+    .skipped-icon { width: 20px; height: 20px; border-radius: 50%; background: #059669; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .skipped-icon svg { width: 12px; height: 12px; }
+
+    .retry-toggle-row { display: flex; align-items: center; justify-content: space-between; }
+    .toggle { position: relative; display: inline-block; width: 38px; height: 21px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 21px; transition: .2s; }
+    .slider::before { content: ''; position: absolute; width: 15px; height: 15px; border-radius: 50%; background: #fff; left: 3px; bottom: 3px; transition: .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+    input:checked + .slider { background: #4f46e5; }
+    input:checked + .slider::before { transform: translateX(17px); }
+
+    .retry-body { margin-top: 14px; }
+    .retry-body.hidden { display: none; }
+    .count-label { font-size: 11.5px; color: #64748b; font-weight: 500; margin-bottom: 8px; }
+    .count-row { display: flex; gap: 7px; flex-wrap: wrap; }
+    .count-pill { padding: 6px 18px; border-radius: 20px; border: 1.5px solid #e2e8f0; background: #fff; font-size: 13px; font-weight: 500; color: #475569; cursor: pointer; user-select: none; transition: all .15s; }
+    .count-pill:hover { border-color: #4f46e5; color: #4f46e5; }
+    .count-pill.active { background: #4f46e5; border-color: #4f46e5; color: #fff; font-weight: 600; box-shadow: 0 1px 4px rgba(79,70,229,.35); }
+    .max-note { font-size: 11px; color: #94a3b8; margin: 5px 0 14px; }
+
+    .retry-cards { display: flex; flex-direction: column; gap: 10px; }
+    .retry-card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; background: #fafbfd; }
+    .retry-card.is-valid  { border-color: #a7f3d0; background: #f0fdf9; }
+    .retry-card.has-error { border-color: #fca5a5; background: #fff5f5; }
+    .rc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .rc-num { width: 24px; height: 24px; border-radius: 50%; background: #e0e7ff; color: #4f46e5; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .rc-title { font-size: 13px; font-weight: 700; color: #0f172a; }
+    .rc-sub { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+    .int-label { font-size: 11.5px; color: #64748b; margin-bottom: 6px; font-weight: 500; }
+    .int-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .int-num { width: 66px; border: 1.5px solid #e2e8f0; border-radius: 7px; padding: 8px 10px; font-size: 13px; font-weight: 600; color: #334155; text-align: center; outline: none; background: #fff; }
+    .int-num:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px #e0e7ff; }
+    .int-sel { border: 1.5px solid #e2e8f0; border-radius: 7px; padding: 8px 12px; font-size: 13px; color: #334155; outline: none; background: #fff; cursor: pointer; }
+    .int-sel:focus { border-color: #4f46e5; }
+    .int-after { font-size: 12px; color: #64748b; }
+    .dt-wrap { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px 14px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; flex-wrap: wrap; }
+    .dt-label { font-size: 12px; color: #0369a1; font-weight: 500; white-space: nowrap; }
+    .dt-select { border: 1.5px solid #7dd3fc; border-radius: 6px; padding: 6px 10px; font-size: 13px; font-weight: 600; color: #0c4a6e; background: #fff; outline: none; cursor: pointer; }
+    .dt-select:focus { border-color: #0284c7; }
+    .sched-badge { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; padding: 4px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 500; }
+    .sched-badge.valid   { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .sched-badge.invalid { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .err-block { display: flex; gap: 8px; background: #fff5f5; border: 1px solid #fca5a5; border-radius: 7px; padding: 9px 12px; margin-top: 8px; font-size: 12px; color: #b91c1c; line-height: 1.5; }
+    .connector { display: flex; align-items: center; gap: 8px; padding: 0 8px; }
+    .conn-line { flex: 1; height: 1px; background: #e2e8f0; }
+    .conn-pill { font-size: 11px; color: #94a3b8; font-weight: 500; white-space: nowrap; background: #fff; padding: 3px 10px; border: 1px solid #e2e8f0; border-radius: 10px; }
+    .info-callout { display: flex; gap: 8px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px 14px; margin-top: 14px; font-size: 12px; color: #0369a1; line-height: 1.6; }
+
+    .deploy-input { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #334155; outline: none; background: #fff; margin-bottom: 12px; transition: border-color .15s; }
+    .deploy-input:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px #e0e7ff; }
+    .deploy-input::placeholder { color: #94a3b8; }
+    .deploy-select-wrap { position: relative; }
+    .deploy-select-wrap select { width: 100%; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 10px 40px 10px 14px; font-size: 13px; color: #94a3b8; outline: none; background: #fff; cursor: pointer; appearance: none; transition: border-color .15s; }
+    .deploy-select-wrap select.has-value { color: #334155; }
+    .deploy-select-wrap select:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px #e0e7ff; }
+    .deploy-chev { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #94a3b8; }
+
+    .modal-footer { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; border-top: 1px solid #f1f5f9; background: #fafbfd; }
+    .btn-cancel { padding: 9px 20px; border: 1.5px solid #e2e8f0; border-radius: 8px; background: #fff; color: #475569; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; }
+    .btn-cancel:hover { background: #f8fafc; border-color: #cbd5e1; }
+    .btn-start { display: flex; align-items: center; gap: 8px; padding: 9px 22px; border: none; border-radius: 8px; background: #4f46e5; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 4px rgba(79,70,229,.35); transition: all .15s; }
+    .btn-start:hover { background: #4338ca; }
+    .btn-start:disabled { background: #a5b4fc; cursor: not-allowed; box-shadow: none; }
+
+    /* ════════════════════════════════
+       TAB 2 — CAMPAIGN REPORT
+    ════════════════════════════════ */
+    .report-page { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(15,23,42,.07), 0 1px 2px rgba(15,23,42,.05), 0 0 0 1px rgba(15,23,42,.05); overflow: hidden; margin-top: 24px; }
+
+    /* Header */
+    .rpt-header { padding: 18px 28px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .rpt-header-left { display: flex; flex-direction: column; gap: 5px; }
+    .rpt-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .rpt-title { font-size: 17px; font-weight: 700; color: #0f172a; letter-spacing: -.03em; }
+    .rpt-job { font-size: 17px; font-weight: 400; color: #94a3b8; letter-spacing: -.01em; }
+    .rpt-lms-badge { background: #f3f0ff; color: #7c3aed; border: 1px solid #ede9fe; border-radius: 5px; padding: 2px 8px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .rpt-automation { font-size: 12px; color: #94a3b8; font-weight: 500; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .rpt-automation strong { color: #4f46e5; font-weight: 600; }
+    .copy-chip { display:inline-flex; align-items:center; gap:5px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:6px; padding:3px 9px; font-size:11.5px; font-weight:600; color:#334155; cursor:pointer; transition:background .15s, border-color .15s; user-select:none; }
+    .copy-chip:hover { background:#e2e8f0; border-color:#cbd5e1; }
+    .copy-chip.copied { background:#dcfce7; border-color:#bbf7d0; color:#15803d; }
+    .copy-chip svg { flex-shrink:0; }
+    .rpt-header-actions { display: flex; align-items: center; gap: 6px; }
+    .rpt-icon-btn { background: none; border: 1px solid #e2e8f0; border-radius: 7px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #64748b; transition: background .12s, border-color .12s, color .12s; }
+    .rpt-icon-btn:hover { background: #f8fafc; border-color: #c7d2fe; color: #4f46e5; }
+    .badge-completed { display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; border: 1px solid #bfdbfe; color: #3b82f6; border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #3b82f6; animation: pulse-dot 1.5s infinite; flex-shrink: 0; }
+    @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
+
+    /* Stat cards */
+    .stat-cards-row { display: flex; gap: 14px; padding: 20px 28px; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; }
+    .stat-card { flex: 1; min-width: 200px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; position: relative; display: flex; flex-direction: column; justify-content: space-between; }
+    .stat-card-icon { position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .sci-purple { background: #f5f3ff; }
+    .sci-blue   { background: #eff6ff; }
+    .sci-green  { background: #f0fdf4; }
+    .sci-amber  { background: #fffbeb; }
+    .stat-card-label { font-size: 10.5px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 14px; }
+    .stat-card-val { font-size: 30px; font-weight: 800; color: #0f172a; line-height: 1; margin-bottom: 4px; letter-spacing: -.03em; }
+    .stat-card-sub { font-size: 12px; color: #94a3b8; margin-bottom: 10px; }
+    .stat-card-badge { display: inline-flex; align-items: center; gap: 4px; background: #dcfce7; color: #15803d; border-radius: 20px; padding: 3px 9px; font-size: 11px; font-weight: 600; }
+
+    /* Section header */
+    .rpt-sec-hdr { padding: 18px 28px 0; font-size: 15px; font-weight: 700; color: #0f172a; letter-spacing: -.02em; }
+
+    /* ── Section Card wrapper ── */
+    .section-card { background:#fff; border:1.5px solid #cbd5e1; border-radius:14px; box-shadow:0 2px 8px rgba(15,23,42,.07); margin-bottom:20px; overflow:hidden; }
+    .section-card-header { display:flex; align-items:center; gap:10px; padding:14px 24px; border-bottom:1.5px solid #e2e8f0; background:#f8fafc; }
+    .section-card-title { font-size:13px; font-weight:700; color:#0f172a; letter-spacing:-.01em; }
+    .section-card-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+    /* ── Horizontal Funnel ── */
+    .funnel-section { padding: 24px 28px 28px; }
+    .h-funnel { display: flex; align-items: center; gap: 0; }
+    .hf-stage { flex: 1; min-width: 0; }
+    .hf-bar { height: 80px; display: flex; align-items: center; justify-content: center; position: relative; }
+    .hf-bar.s1 { background: linear-gradient(135deg,#818cf8,#a5b4fc); clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%, 0 0); border-radius: 8px 0 0 8px; }
+    .hf-bar.s2 { background: linear-gradient(135deg,#a78bfa,#c4b5fd); clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%, 0 0); }
+    .hf-bar.s3 { background: linear-gradient(135deg,#34d399,#6ee7b7); border-radius: 0 8px 8px 0; }
+    .hf-bar-inner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 100%; padding: 0 28px; }
+    .hf-bar-num { font-size: 26px; font-weight: 800; color: #fff; line-height: 1; letter-spacing: -.03em; }
+    .hf-bar-lbl { font-size: 11px; font-weight: 600; color: rgba(255,255,255,.9); text-align: center; letter-spacing: .01em; }
+    .hf-gap { width: 68px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0 8px; }
+    .hf-gap-pct { font-size: 13px; font-weight: 700; color: #334155; }
+    .hf-gap-lbl { font-size: 10px; color: #94a3b8; font-weight: 500; }
+
+    /* ── Not-Connected Breakdown ── */
+    .nc-connector { margin: 8px 0 0; padding-left: 14px; }
+    .nc-connector-line { width: 1.5px; height: 16px; background: #e2e8f0; }
+    .nc-breakdown { background: #fff; border: 1px solid #e2e8f0; border-left: 3px solid #fde68a; border-radius: 0 10px 10px 0; padding: 12px 16px; }
+    .nc-header { margin-bottom: 12px; }
+    .nc-header-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+    .nc-header-label { font-size: 12.5px; font-weight: 700; color: #0f172a; letter-spacing: -.01em; }
+    .nc-header-count { font-size: 11px; font-weight: 600; color: #78350f; background: #fde68a; border-radius: 20px; padding: 2px 9px; }
+    .nc-header-sub { font-size: 11px; color: #94a3b8; font-weight: 500; margin-top: 1px; }
+    .nc-bar { display: flex; border-radius: 10px; overflow: hidden; height: 52px; gap: 3px; }
+    .nc-seg { display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 600; color: #78350f; padding: 0 18px; cursor: default; transition: filter .15s; white-space: nowrap; overflow: hidden; }
+    .nc-seg.exhausted { color: #475569; }
+    .nc-seg:hover { filter: brightness(1.06); }
+    .nc-seg.pending  { background: #fde68a; border-radius: 10px 0 0 10px; }
+    .nc-seg.exhausted{ background: #cbd5e1; border-radius: 0 10px 10px 0; }
+    .nc-seg-count { font-size: 22px; font-weight: 900; line-height: 1; letter-spacing: -.03em; }
+    .nc-legend { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+    .nc-leg-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #475569; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 5px 10px; }
+    .nc-leg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── Fork Funnel ── */
+    .fork-funnel { display: grid; grid-template-columns: auto 44px 1fr 36px 1fr; grid-template-rows: auto auto auto; row-gap: 12px; width: 100%; align-items: center; }
+    /* source card */
+    .ff-source { grid-column:1; grid-row:1/4; align-self:stretch; display:flex; align-items:center; }
+    .ff-src-card { background: linear-gradient(135deg,#6366f1,#818cf8); border-radius: 12px; padding: 18px 22px; text-align: center; color: #fff; box-shadow: 0 4px 14px rgba(99,102,241,.22); }
+    .ff-src-num { font-size: 34px; font-weight: 900; line-height: 1; letter-spacing: -.04em; }
+    .ff-src-lbl { font-size: 10px; font-weight: 600; opacity: .82; margin-top: 5px; letter-spacing: .04em; text-transform: uppercase; }
+    /* fork svg */
+    .ff-fork-svg { grid-column:2; grid-row:1/4; align-self:stretch; width:44px; height:100%; }
+    /* metric cards — all equal via 1fr grid columns */
+    .ff-card { border-radius: 10px; padding: 14px 16px; }
+    .fc-pct { font-size: 9.5px; font-weight: 700; border-radius: 20px; display: inline-block; padding: 2px 8px; margin-bottom: 6px; align-self: flex-start; width: fit-content; }
+    .fc-num { font-size: 26px; font-weight: 800; line-height: 1; letter-spacing: -.03em; }
+    .fc-lbl { font-size: 10px; font-weight: 600; margin-top: 3px; text-transform: uppercase; letter-spacing: .04em; }
+    .fc-connected  { background:#eff6ff; }
+    .fc-connected  .fc-pct { background:#dbeafe; color:#1d4ed8; }
+    .fc-connected  .fc-num { color:#1d4ed8; }
+    .fc-connected  .fc-lbl { color:#93c5fd; }
+    .fc-qualified  { background:#f0fdf4; }
+    .fc-qualified  .fc-pct { background:#dcfce7; color:#15803d; }
+    .fc-qualified  .fc-num { color:#16a34a; }
+    .fc-qualified  .fc-lbl { color:#86efac; }
+    .fc-nc         { background:#fffbeb; }
+    .fc-nc         .fc-pct { background:#fef3c7; color:#92400e; }
+    .fc-nc         .fc-num { color:#d97706; }
+    .fc-nc         .fc-lbl { color:#fcd34d; }
+    .fc-pending    { background:#fff7ed; }
+    .fc-pending    .fc-pct { background:#fef3c7; color:#92400e; }
+    .fc-pending    .fc-num { color:#d97706; }
+    .fc-pending    .fc-lbl { color:#fb923c; }
+    .fc-exhausted  { background:#f8fafc; }
+    .fc-exhausted  .fc-pct { background:#f1f5f9; color:#475569; }
+    .fc-exhausted  .fc-num { color:#64748b; }
+    .fc-exhausted  .fc-lbl { color:#94a3b8; }
+    /* connector lines */
+    .ff-arr { height:1.5px; background:#e2e8f0; align-self:center; }
+
+    /* ── Screenshot-style Fork Funnel ── */
+    .sf-funnel { display:grid; grid-template-columns:auto 1fr auto 1fr auto; grid-template-rows:auto auto auto; row-gap:12px; column-gap:0; align-items:center; }
+    /* Source card */
+    .sf-src { grid-column:1; grid-row:1/4; align-self:stretch; display:flex; align-items:center; padding-right:0; }
+    .sf-src-card { background:linear-gradient(135deg,#6366f1,#818cf8); border-radius:16px; padding:22px 26px; text-align:center; color:#fff; box-shadow:0 6px 20px rgba(99,102,241,.28); }
+    .sf-src-num { font-size:46px; font-weight:900; line-height:1; letter-spacing:-.04em; }
+    .sf-src-lbl { font-size:10px; font-weight:600; opacity:.8; margin-top:6px; letter-spacing:.08em; text-transform:uppercase; }
+    /* Fork SVG */
+    .sf-fork-svg { grid-column:2; grid-row:1/4; align-self:stretch; width:100%; height:100%; }
+    /* Medium cards */
+    .sf-card { border-radius:12px; padding:14px 18px; }
+    .sf-card-pct { font-size:11px; font-weight:600; margin-bottom:6px; }
+    .sf-card-num { font-size:38px; font-weight:900; line-height:1; letter-spacing:-.04em; }
+    .sf-card-lbl { font-size:10px; font-weight:700; margin-top:5px; text-transform:uppercase; letter-spacing:.07em; }
+    /* Connected */
+    .sf-connected { background:#dbeafe; border:1px solid #bfdbfe; grid-column:3; grid-row:1; }
+    .sf-connected .sf-card-pct { color:#3730a3; }
+    .sf-connected .sf-card-num { color:#1d4ed8; }
+    .sf-connected .sf-card-lbl { color:#60a5fa; }
+    /* Qualified */
+    .sf-qualified { background:#dcfce7; border:1px solid #bbf7d0; }
+    .sf-qualified .sf-card-pct { color:#15803d; }
+    .sf-qualified .sf-card-num { color:#16a34a; }
+    .sf-qualified .sf-card-lbl { color:#4ade80; }
+    /* Not Connected */
+    .sf-nc { background:#fef9c3; border:1px solid #fde047; align-self:stretch; display:flex; flex-direction:column; justify-content:center; }
+    .sf-nc .sf-card-pct { color:#b45309; }
+    .sf-nc .sf-card-num { color:#d97706; }
+    .sf-nc .sf-card-lbl { color:#fbbf24; }
+    /* Arrow: Connected → Qualified */
+    .sf-h-arr { display:flex; align-items:center; align-self:center; }
+    .sf-h-arr-line { flex:1; height:2.5px; background:#16a34a; }
+    .sf-h-arr-head { width:0; height:0; border-top:5px solid transparent; border-bottom:5px solid transparent; border-left:8px solid #16a34a; }
+    /* Retry small cards */
+    .sf-retry { display:flex; align-items:center; gap:12px; border-radius:10px; padding:11px 14px; }
+    .sf-retry-num { font-size:28px; font-weight:900; line-height:1; letter-spacing:-.03em; flex-shrink:0; }
+    .sf-retry-lbl { font-size:12px; font-weight:700; line-height:1.3; }
+    .sf-retry-sub { font-size:10.5px; color:#94a3b8; margin-top:2px; }
+    .sf-pending { background:#ffedd5; border:1px solid #fed7aa; }
+    .sf-pending .sf-retry-num { color:#ea580c; }
+    .sf-pending .sf-retry-lbl { color:#9a3412; }
+    .sf-exhausted { background:#f1f5f9; border:1px solid #e2e8f0; }
+    .sf-exhausted .sf-retry-num { color:#94a3b8; }
+    .sf-exhausted .sf-retry-lbl { color:#64748b; }
+
+    /* ── Flexbox Fork Funnel ── */
+    .fk-wrap { display:flex; align-items:center; width:100%; gap:0; }
+    .fk-src { flex-shrink:0; }
+    .fk-src-card { background:linear-gradient(135deg,#6366f1,#818cf8); border-radius:16px; padding:22px 26px; color:#fff; box-shadow:0 6px 20px rgba(99,102,241,.28); min-width:130px; display:flex; flex-direction:row; align-items:flex-start; gap:10px; }
+    .fk-src-num { font-size:46px; font-weight:900; line-height:1; letter-spacing:-.04em; }
+    .fk-src-lbl { font-size:10px; font-weight:600; opacity:.8; margin-top:6px; letter-spacing:.08em; text-transform:uppercase; }
+    .fk-main-svg { flex:1; align-self:stretch; display:block; min-width:60px; }
+    .fk-lanes { flex:4; display:grid; grid-template-columns:2fr 1fr 2fr; row-gap:12px; min-width:0; align-items:center; }
+    .fk-lane { display:contents; }
+    .fk-card { border-radius:12px; padding:14px 20px; flex:2 1 0; min-width:0; display:flex; flex-direction:row; align-items:flex-start; gap:10px; }
+    .fk-card-body { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; }
+    .fk-pct { font-size:11px; font-weight:600; margin-bottom:6px; width:fit-content; }
+    .fk-num { font-size:38px; font-weight:900; line-height:1; letter-spacing:-.04em; }
+    .fk-lbl { font-size:10px; font-weight:700; margin-top:5px; text-transform:uppercase; letter-spacing:.07em; }
+    .fk-connected { background:#dbeafe; border:1px solid #bfdbfe; align-self:center; }
+    .fk-connected .fk-pct { color:#3730a3; }
+    .fk-connected .fk-num { color:#1d4ed8; }
+    .fk-connected .fk-lbl { color:#60a5fa; }
+    .fk-qualified { background:#dcfce7; border:1px solid #bbf7d0; }
+    .fk-qualified .fk-pct { color:#15803d; }
+    .fk-qualified .fk-num { color:#16a34a; }
+    .fk-qualified .fk-lbl { color:#4ade80; }
+    .fk-nc { background:#fef9c3; border:1px solid #fde047; align-self:center; }
+    .fk-nc .fk-pct { color:#b45309; }
+    .fk-nc .fk-num { color:#d97706; }
+    .fk-nc .fk-lbl { color:#fbbf24; }
+    .fk-arr-svg { flex:1; align-self:center; height:16px; display:block; min-width:40px; }
+    .fk-mini-svg { flex:1; align-self:stretch; display:block; min-width:40px; }
+    .fk-retry-stack { flex:2 1 0; display:flex; flex-direction:column; gap:8px; min-width:0; justify-content:center; }
+    .fk-retry { display:flex; align-items:center; gap:12px; border-radius:10px; padding:12px 16px; }
+    .fk-retry-num { font-size:28px; font-weight:900; line-height:1; letter-spacing:-.03em; flex-shrink:0; }
+    .fk-retry-lbl { font-size:12px; font-weight:700; }
+    .fk-retry-sub { font-size:10.5px; color:#94a3b8; margin-top:2px; }
+    .fk-pending { background:#ffedd5; border:1px solid #fed7aa; }
+    .fk-pending .fk-retry-num { color:#ea580c; }
+    .fk-pending .fk-retry-lbl { color:#9a3412; }
+    .fk-exhausted { background:#e2e8f0; border:1px solid #cbd5e1; }
+    .fk-exhausted .fk-retry-num { color:#94a3b8; }
+    .fk-exhausted .fk-retry-lbl { color:#64748b; }
+    .fk-icon { width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .fk-src-icon { background:rgba(255,255,255,0.2); margin-left:auto; }
+    .fk-connected .fk-icon { background:#bfdbfe; }
+    .fk-qualified .fk-icon { background:#bbf7d0; }
+    .fk-nc .fk-icon { background:#fde047; }
+    .fk-retry-icon { width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .fk-pending .fk-retry-icon { background:#fed7aa; }
+    .fk-exhausted .fk-retry-icon { background:#cbd5e1; }
+
+    /* ── Compact Campaign Funnel ── */
+    .cf-row { display:flex; align-items:center; gap:0; width:100%; }
+    .cf-stage { display:flex; align-items:center; gap:10px; padding:10px 14px; background:#fff; border:1px solid #f1f5f9; border-radius:10px; flex-shrink:0; }
+    .cf-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+    .cf-info { display:flex; flex-direction:column; gap:1px; }
+    .cf-label { font-size:10.5px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
+    .cf-num { font-size:22px; font-weight:800; line-height:1; letter-spacing:-.03em; }
+    .cf-arrow { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:0 6px; min-width:40px; }
+    .cf-arrow-line { width:100%; height:1.5px; background:#e2e8f0; }
+    .cf-arrow-pct { font-size:10px; font-weight:700; color:#94a3b8; }
+    .cf-spacer { flex:1; }
+    .cf-split-label { display:flex; align-items:center; gap:10px; margin:10px 0 10px; }
+    .cf-split-line { flex:1; height:1px; background:#f1f5f9; }
+    .cf-split-label span { font-size:10.5px; font-weight:600; color:#94a3b8; white-space:nowrap; letter-spacing:.02em; }
+
+
+    /* ── Performance Overview (stat strip) ── */
+    .metrics-section { padding: 24px 28px 28px; }
+    /* The strip */
+    .stat-strip { display: flex; border: 1.5px solid #cbd5e1; border-radius: 10px; overflow: hidden; background: #fff; box-shadow: 0 1px 4px rgba(15,23,42,.08); }
+    .stat-strip-divider { width: 1px; background: #e2e8f0; flex-shrink: 0; align-self: stretch; }
+    .stat-strip-divider.major { background: #cbd5e1; }
+    .ss-stat { flex: 1; padding: 16px 18px; cursor: default; transition: background .12s; position: relative; }
+    .ss-stat:hover { background: #fafbfd; }
+    .ss-label { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 7px; display: flex; align-items: center; justify-content: space-between; }
+    .ss-icon { flex-shrink: 0; display: flex; align-items: center; opacity: .55; }
+    .ss-value { font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1; letter-spacing: -.03em; margin-bottom: 4px; }
+    .ss-sub { font-size: 11px; color: #94a3b8; line-height: 1.4; }
+    .ss-badge { display: inline-flex; align-items: center; gap: 3px; margin-top: 7px; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 600; }
+    .sb-green  { background: #f0fdf4; color: #059669; }
+    .sb-amber  { background: #fffbeb; color: #b45309; }
+    .sb-slate  { background: #f1f5f9; color: #475569; }
+    .sb-violet { background: #f5f3ff; color: #6d28d9; }
+
+    /* ── Calls Toolbar ── */
+    .calls-toolbar { display: flex; align-items: center; gap: 10px; padding: 16px 28px; border-bottom: 1.5px solid #e2e8f0; background: #f8fafc; flex-wrap: wrap; }
+    .calls-section-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .07em; margin-right: 4px; }
+    .search-box { display: flex; align-items: center; gap: 8px; border: 1.5px solid #cbd5e1; border-radius: 7px; padding: 7px 12px; background: #fff; flex: 1; min-width: 220px; box-shadow: 0 1px 3px rgba(15,23,42,.07); }
+    .search-box input { border: none; outline: none; font-size: 13px; color: #334155; width: 100%; background: transparent; }
+    .search-box input::placeholder { color: #94a3b8; }
+    .filter-btn { display: flex; align-items: center; gap: 6px; border: 1.5px solid #cbd5e1; border-radius: 7px; padding: 7px 14px; background: #fff; font-size: 12.5px; font-weight: 500; color: #475569; cursor: pointer; white-space: nowrap; box-shadow: 0 1px 3px rgba(15,23,42,.07); }
+    .filter-btn:hover { background: #f8fafc; border-color: #94a3b8; }
+    .filter-btn.has-filter { border-color: #6366f1; color: #4f46e5; background: #eef2ff; }
+    .filter-dropdown { position: relative; }
+    .filter-menu { position: absolute; top: calc(100% + 6px); left: 0; background: #fff; border: 1.5px solid #cbd5e1; border-radius: 10px; box-shadow: 0 6px 20px rgba(15,23,42,.13); min-width: 170px; z-index: 300; display: none; padding: 5px; }
+    .filter-dropdown.open .filter-menu { display: block; }
+    .filter-menu-item { padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; color: #334155; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background .1s; }
+    .filter-menu-item:hover { background: #f1f5f9; }
+    .filter-menu-item.selected { background: #eef2ff; color: #4f46e5; font-weight: 600; }
+    .filter-menu-divider { height: 1px; background: #e2e8f0; margin: 4px 0; }
+    .calls-meta { display: flex; align-items: center; justify-content: space-between; padding: 10px 28px; border-bottom: 1.5px solid #e2e8f0; background: #f8fafc; }
+    .results-count { font-size: 12.5px; color: #64748b; font-weight: 500; }
+    .btn-download { display: flex; align-items: center; gap: 6px; border: 1.5px solid #cbd5e1; border-radius: 7px; padding: 7px 14px; background: #fff; font-size: 12.5px; color: #475569; cursor: pointer; font-weight: 500; box-shadow: 0 1px 3px rgba(15,23,42,.07); }
+    .btn-download:hover { background: #f8fafc; }
+
+    /* ── Contacts Table ── */
+    .calls-table { width: 100%; border-collapse: collapse; }
+    .calls-table th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #475569; background: #eef2f7; border-bottom: 2px solid #b6c2d0; white-space: nowrap; text-transform: uppercase; letter-spacing: .06em; }
+    .calls-table th:first-child { padding-left: 28px; }
+    .calls-table th:last-child  { padding-right: 28px; }
+    .calls-table td { padding: 14px 16px; font-size: 13px; color: #334155; border-bottom: 1px solid #e9eef4; vertical-align: top; }
+    .calls-table td:first-child { padding-left: 28px; }
+    .calls-table td:last-child  { padding-right: 28px; }
+    .calls-table tr:last-child td { border-bottom: none; }
+    .calls-table tbody tr:hover td { background: #f5f7fa; }
+
+    /* Contact cell */
+    .cust-cell { display: flex; align-items: center; gap: 10px; }
+    .cust-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; flex-shrink: 0; }
+    .av-em { background: #fce7f3; color: #be185d; }
+    .av-u  { background: #f1f5f9; color: #64748b; }
+    .av-dl { background: #ede9fe; color: #7c3aed; }
+    .av-s  { background: #dcfce7; color: #15803d; }
+    .cust-name { font-size: 13px; font-weight: 600; color: #0f172a; letter-spacing: -.01em; }
+    .cust-phone { font-size: 11.5px; color: #94a3b8; margin-top: 2px; }
+    .retry-badge { background: #e0e7ff; color: #4338ca; font-size: 10px; font-weight: 700; border-radius: 10px; padding: 1px 6px; }
+
+    /* Attempt chips */
+    .att-chip { display: inline-flex; align-items: center; gap: 4px; border-radius: 5px; padding: 3px 8px; font-size: 11px; font-weight: 600; white-space: nowrap; width: fit-content; }
+    .ac-connected { background: #f0fdf4; color: #059669; border: 1px solid #a7f3d0; }
+    .ac-voicemail { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .ac-busy      { background: #fefce8; color: #a16207; border: 1px solid #fde68a; }
+    .ac-failed    { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .ac-pending   { background: #f5f3ff; color: #7c3aed; border: 1px dashed #ddd6fe; }
+    .att-time { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+    .att-none { color: #e2e8f0; font-size: 18px; line-height: 1; }
+
+    /* Attempt count pill */
+    .att-count { display: inline-flex; align-items: center; gap: 5px; border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 600; }
+    .atc-done    { background: #f0fdf4; color: #059669; border: 1px solid #a7f3d0; }
+    .atc-pending { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+    .atc-inbound { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+
+    /* Outcome badge */
+    .cs-badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+    .cs-qualified   { background: #f0fdf4; color: #059669; border: 1px solid #a7f3d0; }
+    .cs-connected   { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .cs-pending     { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+    .cs-not-reached { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+
+    /* Expand button */
+    .expand-btn { background: #e2e8f0; border: 1px solid #cbd5e1; cursor: pointer; color: #475569; padding: 5px 7px; border-radius: 7px; transition: transform .2s, color .2s, background .15s, border-color .15s; display: flex; align-items: center; }
+    .expand-btn:hover { background: #dde3ec; border-color: #94a3b8; color: #1e293b; }
+    .expand-btn.open { transform: rotate(180deg); color: #4f46e5; background: #eef2ff; border-color: #a5b4fc; }
+
+    /* Timeline expanded row */
+    .timeline-row td { padding: 0; background: #fafbfd; border-bottom: 1px solid #e2e8f0; }
+    .timeline-row.tl-hidden { display: none; }
+    .timeline-wrap { padding: 20px 28px 24px 72px; }
+    .tl-heading { font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 16px; }
+    .timeline { display: flex; flex-direction: column; position: relative; padding-left: 22px; }
+    .timeline::before { content: ''; position: absolute; left: 6px; top: 10px; bottom: 10px; width: 1.5px; background: #e2e8f0; border-radius: 2px; }
+    .tl-event { display: flex; align-items: flex-start; gap: 16px; position: relative; padding-bottom: 20px; }
+    .tl-event:last-child { padding-bottom: 0; }
+    .tl-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; position: absolute; left: -22px; top: 4px; border: 2px solid #fff; box-sizing: border-box; }
+    .td-connected { background: #059669; box-shadow: 0 0 0 3px #d1fae5; }
+    .td-voicemail { background: #c2410c; box-shadow: 0 0 0 3px #ffedd5; }
+    .td-busy      { background: #a16207; box-shadow: 0 0 0 3px #fef9c3; }
+    .td-failed    { background: #dc2626; box-shadow: 0 0 0 3px #fee2e2; }
+    .td-inbound   { background: #2563eb; box-shadow: 0 0 0 3px #dbeafe; }
+    .td-pending   { background: #fff; border: 2px dashed #c4b5fd; box-shadow: none; }
+    .tl-body { flex: 1; }
+    .tl-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .tl-label { font-size: 13px; font-weight: 700; color: #0f172a; letter-spacing: -.01em; }
+    .tl-tag { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; letter-spacing: .01em; }
+    .tt-outbound { background: #f1f5f9; color: #64748b; }
+    .tt-inbound  { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .tt-pending  { background: #f5f3ff; color: #7c3aed; border: 1px dashed #ddd6fe; }
+    .tl-meta { font-size: 11.5px; color: #64748b; margin-top: 5px; }
+    .tl-outcome { display: inline-block; font-size: 11.5px; color: #334155; font-weight: 600; background: #f1f5f9; border-radius: 5px; padding: 3px 9px; margin-top: 6px; }
+    .tl-transcript-link { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; font-size: 11.5px; font-weight: 600; color: #4f46e5; cursor: pointer; text-decoration: none; background: none; border: none; padding: 0; line-height: 1; }
+    .tl-transcript-link:hover { color: #3730a3; text-decoration: underline; }
+    .tl-transcript-link svg { flex-shrink: 0; }
+
+    /* ── Transcript Modal ── */
+    .tr-overlay { position: fixed; inset: 0; background: rgba(15,23,42,.45); backdrop-filter: blur(3px); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s; }
+    .tr-overlay.open { opacity: 1; pointer-events: all; }
+    .tr-modal { width: 700px; max-width: 95vw; max-height: 88vh; background: #fff; border-radius: 14px; box-shadow: 0 20px 60px rgba(15,23,42,.18), 0 0 0 1px rgba(15,23,42,.07); display: flex; flex-direction: column; overflow: hidden; transform: translateY(12px); transition: transform .2s; }
+    .tr-overlay.open .tr-modal { transform: translateY(0); }
+    .tr-modal-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 20px 24px 16px; border-bottom: 1px solid #f1f5f9; flex-shrink: 0; }
+    .tr-modal-meta { display: flex; flex-direction: column; gap: 3px; }
+    .tr-modal-title { font-size: 15px; font-weight: 700; color: #0f172a; letter-spacing: -.02em; }
+    .tr-modal-sub { font-size: 12px; color: #94a3b8; font-weight: 500; }
+    .tr-close { background: none; border: none; cursor: pointer; color: #94a3b8; padding: 4px; border-radius: 6px; display: flex; }
+    .tr-close:hover { background: #f1f5f9; color: #334155; }
+    .tr-tabs { display: flex; border-bottom: 1px solid #e2e8f0; padding: 0 24px; flex-shrink: 0; }
+    .tr-tab { padding: 10px 14px; font-size: 13px; font-weight: 500; color: #64748b; border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .12s, border-color .12s; }
+    .tr-tab.active { color: #4f46e5; border-bottom-color: #4f46e5; font-weight: 600; }
+    .tr-body { flex: 1; overflow-y: auto; padding: 24px; }
+    .tr-pane { display: none; }
+    .tr-pane.active { display: block; }
+
+    /* Summary tab */
+    .tr-summary-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; }
+    .tr-summary-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #94a3b8; margin-bottom: 8px; }
+    .tr-summary-text { font-size: 13.5px; color: #1e293b; line-height: 1.65; font-weight: 400; }
+    .tr-kv-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+    .tr-kv { flex: 1; min-width: 120px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; }
+    .tr-kv-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #94a3b8; margin-bottom: 5px; }
+    .tr-kv-val { font-size: 13px; font-weight: 600; color: #0f172a; }
+    .tr-sentiment { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 600; }
+    .tr-sentiment.positive { background: #d1fae5; color: #065f46; }
+    .tr-sentiment.neutral { background: #f1f5f9; color: #475569; }
+
+    /* Recording tab */
+    .tr-recording-card { border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+    .tr-recording-top { background: linear-gradient(135deg, #f8fafc, #eef2ff); padding: 20px 20px 16px; display: flex; align-items: center; gap: 14px; }
+    .tr-play-btn { width: 44px; height: 44px; border-radius: 50%; background: #4f46e5; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 8px rgba(79,70,229,.35); transition: background .12s, transform .1s; }
+    .tr-play-btn:hover { background: #3730a3; transform: scale(1.05); }
+    .tr-waveform { flex: 1; height: 40px; display: flex; align-items: center; gap: 2px; }
+    .tr-waveform-bar { flex: 1; border-radius: 2px; background: #c7d2fe; transition: background .12s; }
+    .tr-waveform-bar.played { background: #4f46e5; }
+    .tr-recording-info { padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; background: #fff; border-top: 1px solid #f1f5f9; }
+    .tr-rec-dur { font-size: 12px; color: #64748b; font-weight: 500; }
+    .tr-download-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #4f46e5; background: none; border: 1px solid #c7d2fe; border-radius: 6px; padding: 5px 12px; cursor: pointer; transition: background .12s; }
+    .tr-download-btn:hover { background: #eef2ff; }
+
+    /* Transcript tab */
+    .tr-transcript-search { display: flex; align-items: center; gap: 8px; border: 1px solid #e2e8f0; border-radius: 7px; padding: 7px 12px; margin-bottom: 16px; background: #f8fafc; }
+    .tr-transcript-search input { border: none; background: none; outline: none; font-size: 13px; color: #334155; flex: 1; font-family: inherit; }
+    .tr-line { display: flex; gap: 12px; margin-bottom: 14px; }
+    .tr-speaker-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+    .tr-sa-agent { background: #eef2ff; color: #4f46e5; }
+    .tr-sa-contact { background: #f0fdf4; color: #065f46; }
+    .tr-bubble { flex: 1; }
+    .tr-speaker-name { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+    .tr-speech { font-size: 13px; color: #1e293b; line-height: 1.6; background: #f8fafc; border-radius: 0 8px 8px 8px; padding: 8px 12px; display: inline-block; }
+    .tr-line.agent .tr-speech { background: #eef2ff; border-radius: 0 8px 8px 8px; }
+    .tr-timestamp { font-size: 10px; color: #cbd5e1; font-weight: 500; margin-top: 4px; }
+    .tl-inbound-note { font-size: 11px; color: #3b82f6; margin-top: 5px; font-style: italic; }
+
+    /* Misc legacy */
+    .att-cell { display: flex; flex-direction: column; gap: 3px; }
+    .fo-text { font-size: 12px; color: #334155; }
+    .fo-sub  { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .status-badge { display: inline-flex; align-items: center; gap: 5px; border-radius: 6px; padding: 4px 10px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+    .s-completed { background: #f0fdf4; color: #059669; border: 1px solid #a7f3d0; }
+    .s-voicemail { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .s-failed    { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .outcome-pill { background: #f1f5f9; color: #334155; border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 500; display: inline-block; white-space: nowrap; }
+    .qs-dash { color: #e2e8f0; font-size: 15px; }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+
+
+<!-- Page Body -->
+<div class="page-body">
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('t1',this)">Deploy Campaign</button>
+  <button class="tab-btn" onclick="switchTab('t2',this)">Campaign Report</button>
+</div>
+
+<!-- ══════════ TAB 1 ══════════ -->
+<div id="t1" class="tab-pane active">
+  <div class="t1-outer">
+  <div class="modal">
+
+    <div class="modal-header">
+      <div class="header-left">
+        <div class="header-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.68A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92z"/></svg>
+        </div>
+        <div>
+          <div class="header-title">MIO AI Voice Agent</div>
+          <div class="header-sub">Automate Your Calls with MIO calling Agent</div>
+        </div>
+      </div>
+      <button class="close-btn">&#x2715;</button>
+    </div>
+
+    <div class="steps-bar">
+      <div class="step done"><div class="step-circle"><svg width="13" height="13" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="step-label">Agent</span></div>
+      <div class="step-line done"></div>
+      <div class="step done"><div class="step-circle"><svg width="13" height="13" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="step-label">Test Call</span></div>
+      <div class="step-line done"></div>
+      <div class="step active"><div class="step-circle">3</div><span class="step-label">Retry</span></div>
+      <div class="step-line pending"></div>
+      <div class="step pending"><div class="step-circle">4</div><span class="step-label">Deploy</span></div>
+    </div>
+
+    <div class="info-bar">
+      <div class="ib-left">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <div><div class="ib-records">10 Selected Records</div><div class="ib-cost">Approx Cost: <strong>0 METS</strong> &#9432;</div></div>
+        <button class="btn-setup">Setup</button>
+      </div>
+      <div class="ib-avail">Available: <strong>0.00 METS</strong></div>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="section">
+        <div class="section-title"><div class="section-dot"></div>Step 1: Choose AI Agent</div>
+        <div class="agent-wrap">
+          <input type="text" value="Kartik test agent" readonly />
+          <div class="agent-actions">
+            <span class="a-x">&#x2715;</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section">
+        <div class="section-title"><div class="section-dot"></div>Step 2: Test Call</div>
+        <p class="section-sub">Before deploying lead(s), Test your selected agent with a sample call to ensure optimal performance and voice Quality</p>
+        <div class="skipped-banner">
+          <div class="skipped-icon"><svg viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          Test call skipped
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section">
+        <div class="retry-toggle-row">
+          <div class="section-title" style="margin-bottom:0"><div class="section-dot"></div>Step 3: Call Retry Configuration</div>
+          <label class="toggle"><input type="checkbox" id="retryToggle" checked onchange="onRetryToggle(this.checked)"/><span class="slider"></span></label>
+        </div>
+        <p class="section-sub" style="margin-top:6px;">Automatically retry calls that go unanswered or unreachable.</p>
+        <div class="retry-body" id="retryBody">
+          <p class="count-label">Number of retry attempts</p>
+          <div class="count-row">
+            <div class="count-pill" onclick="selectCount(1,this)">1</div>
+            <div class="count-pill" onclick="selectCount(2,this)">2</div>
+            <div class="count-pill active" onclick="selectCount(3,this)">3</div>
+            <div class="count-pill" onclick="selectCount(4,this)">4</div>
+            <div class="count-pill" onclick="selectCount(5,this)">5</div>
+          </div>
+          <p class="max-note">Max 5 retries per lead per campaign run.</p>
+          <div class="retry-cards" id="retryCards"></div>
+          <div class="info-callout">
+            <span style="flex-shrink:0">&#9432;</span>
+            <span>If the lead picks up on <strong>any</strong> retry, all subsequent retries are automatically cancelled. Retries must be scheduled between <strong>9:00 AM – 9:00 PM</strong>.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section">
+        <div class="section-title"><div class="section-dot"></div>Step 4: Deploy Campaign</div>
+        <input class="deploy-input" type="text" id="campaignName" placeholder="Enter campaign name" oninput="updateStartBtn()" />
+        <div class="deploy-select-wrap">
+          <select id="campaignType" onchange="this.classList.toggle('has-value',!!this.value);updateStartBtn()">
+            <option value="" disabled selected>Select Campaign Type</option>
+            <option value="outbound">Outbound</option>
+            <option value="inbound">Inbound</option>
+            <option value="blended">Blended</option>
+          </select>
+          <span class="deploy-chev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel">Cancel</button>
+      <button class="btn-start" id="startBtn" disabled onclick="handleStart()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Start Campaign
+      </button>
+    </div>
+
+  </div>
+  </div>
+</div><!-- /t1 -->
+
+<!-- ══════════ TAB 2 ══════════ -->
+<div id="t2" class="tab-pane">
+<div class="report-page">
+
+  <!-- Campaign Header -->
+  <div class="rpt-header">
+    <div class="rpt-header-left">
+      <div class="rpt-title-row">
+        <span class="rpt-title">LPU Lead Qualification Campaign #1</span>
+<span class="badge-completed"><div class="badge-dot"></div>Campaign Running</span>
+      </div>
+      <div class="rpt-automation">
+        <span>Job ID: <span class="copy-chip" onclick="copyText('15639942', this)" title="Click to copy">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          #15639942
+        </span></span>
+        <span>Automation ID: <span class="copy-chip" onclick="copyText('51033', this)" title="Click to copy">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          #51033
+        </span></span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Campaign Funnel -->
+  <div class="section-card">
+    <div class="section-card-header">
+      <div class="section-card-dot" style="background:#6366f1;"></div>
+      <div class="section-card-title">Campaign Funnel</div>
+    </div>
+  <div class="funnel-section">
+
+    <div class="fk-wrap">
+
+      <!-- 195 source card -->
+      <div class="fk-src">
+        <div class="fk-src-card">
+          <div class="fk-card-body">
+            <div class="fk-src-num">195</div>
+            <div class="fk-src-lbl">Total Contacts</div>
+          </div>
+          <div class="fk-icon fk-src-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main fork SVG: stretches between 195 and the two lanes -->
+      <svg class="fk-main-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <line x1="0"  y1="50" x2="50" y2="50" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="50" y1="25" x2="50" y2="75" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="50" y1="25" x2="100" y2="25" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="50" y1="75" x2="100" y2="75" stroke="#d97706" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+
+      <!-- Right side: two lanes stacked -->
+      <div class="fk-lanes">
+
+        <!-- Lane 1: Connected → Qualified -->
+        <div class="fk-lane">
+          <div class="fk-card fk-connected">
+            <div class="fk-card-body">
+              <div class="fk-pct">46% of total</div>
+              <div class="fk-num">89</div>
+              <div class="fk-lbl">Contacts Connected</div>
+            </div>
+            <div class="fk-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.99 14 19.79 19.79 0 0 1 1.92 5.33 2 2 0 0 1 3.92 3h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 10.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 17.92z"/></svg>
+            </div>
+          </div>
+          <svg class="fk-arr-svg" viewBox="0 0 100 10" preserveAspectRatio="none">
+            <line x1="0" y1="5" x2="100" y2="5" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+          <div class="fk-card fk-qualified">
+            <div class="fk-card-body">
+              <div class="fk-pct">47% of connected</div>
+              <div class="fk-num">42</div>
+              <div class="fk-lbl">Contacts Qualified</div>
+            </div>
+            <div class="fk-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lane 2: Not Connected → Retry Pending + Retry Exhausted -->
+        <div class="fk-lane">
+          <div class="fk-card fk-nc">
+            <div class="fk-card-body">
+              <div class="fk-pct">54% of total</div>
+              <div class="fk-num">106</div>
+              <div class="fk-lbl">Contacts Not Connected</div>
+            </div>
+            <div class="fk-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 5a10.94 10.94 0 0 0-1.956 2.04"/><path d="M10.68 10.68a10.94 10.94 0 0 0 3.32 2.32"/><path d="M9.32 9.32A10.94 10.94 0 0 0 5 12.55"/><path d="M14.5 14.5a4 4 0 0 0-5.66 5.66"/><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.99 14"/><path d="M1.92 5.33A2 2 0 0 1 3.92 3h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 10.9"/></svg>
+            </div>
+          </div>
+          <svg class="fk-mini-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <line x1="0"  y1="50" x2="50" y2="50" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="50" y1="25" x2="50" y2="75" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="50" y1="25" x2="100" y2="25" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="50" y1="75" x2="100" y2="75" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+          <div class="fk-retry-stack">
+            <div class="fk-retry fk-pending">
+              <div>
+                <div class="fk-retry-num">63</div>
+                <div class="fk-retry-sub">Contacts</div>
+              </div>
+              <div>
+                <div class="fk-retry-lbl">Retry Pending</div>
+                <div class="fk-retry-sub">next attempt scheduled</div>
+              </div>
+              <div class="fk-retry-icon" style="margin-left:auto;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+            </div>
+            <div class="fk-retry fk-exhausted">
+              <div>
+                <div class="fk-retry-num">43</div>
+                <div class="fk-retry-sub">Contacts</div>
+              </div>
+              <div>
+                <div class="fk-retry-lbl">Retry Exhausted</div>
+                <div class="fk-retry-sub">no attempts remaining</div>
+              </div>
+              <div class="fk-retry-icon" style="margin-left:auto;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  </div><!-- /section-card Campaign Funnel -->
+
+  <!-- Performance Overview -->
+  <div class="section-card">
+    <div class="section-card-header">
+      <div class="section-card-dot" style="background:#10b981;"></div>
+      <div class="section-card-title">Performance Overview</div>
+    </div>
+  <div class="metrics-section">
+
+    <div class="stat-strip">
+
+      <div class="ss-stat">
+        <div class="ss-label">
+          Voicemail / Unanswered
+          <span class="ss-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.1 1.18C.1.6.49.1 1.06.1H4.1a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L5.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 14.9v2.02z"/><line x1="1" y1="1" x2="23" y2="23"/></svg></span>
+        </div>
+        <div class="ss-value">26%</div>
+        <div class="ss-sub">51 contacts</div>
+      </div>
+
+      <div class="stat-strip-divider"></div>
+
+      <div class="ss-stat">
+        <div class="ss-label">
+          Busy
+          <span class="ss-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/><line x1="9" y1="15" x2="15" y2="15"/></svg></span>
+        </div>
+        <div class="ss-value">6%</div>
+        <div class="ss-sub">12 contacts</div>
+      </div>
+
+      <div class="stat-strip-divider"></div>
+
+      <div class="ss-stat">
+        <div class="ss-label">
+          Call Failed
+          <span class="ss-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>
+        </div>
+        <div class="ss-value">2%</div>
+        <div class="ss-sub">4 contacts</div>
+      </div>
+
+      <div class="stat-strip-divider major"></div>
+
+      <div class="ss-stat">
+        <div class="ss-label">
+          Avg. Call Duration
+          <span class="ss-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+        </div>
+        <div class="ss-value">0:48</div>
+        <div class="ss-sub">per connected call</div>
+      </div>
+
+      <div class="stat-strip-divider"></div>
+
+      <div class="ss-stat">
+        <div class="ss-label">
+          Qualification Rate
+          <span class="ss-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </div>
+        <div class="ss-value">22%</div>
+        <div class="ss-sub">42 of 195 contacts</div>
+      </div>
+
+    </div>
+  </div>
+  </div><!-- /section-card Performance Overview -->
+
+  <!-- Contacts Overview -->
+  <div class="section-card">
+    <div class="section-card-header">
+      <div class="section-card-dot" style="background:#3b82f6;"></div>
+      <div class="section-card-title">Contacts Overview</div>
+    </div>
+  <div class="calls-toolbar">
+    <div class="search-box">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Search by customer, phone (min 3 chars)" />
+    </div>
+    <div class="filter-dropdown" id="ddOutcome">
+      <button class="filter-btn" onclick="toggleFilterDD('ddOutcome')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        <span class="filter-label">All Outcomes</span>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="filter-menu">
+        <div class="filter-menu-item" onclick="setFilter('outcome','','All Outcomes','ddOutcome')">All Outcomes</div>
+        <div class="filter-menu-divider"></div>
+        <div class="filter-menu-item" onclick="setFilter('outcome','qualified','Qualified','ddOutcome')">Qualified</div>
+        <div class="filter-menu-item" onclick="setFilter('outcome','not-qualified','Not Qualified','ddOutcome')">Not Qualified</div>
+        <div class="filter-menu-item" onclick="setFilter('outcome','maybe','Maybe','ddOutcome')">Maybe</div>
+      </div>
+    </div>
+    <div class="filter-dropdown" id="ddStatus">
+      <button class="filter-btn" onclick="toggleFilterDD('ddStatus')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/></svg>
+        <span class="filter-label">All Statuses</span>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="filter-menu">
+        <div class="filter-menu-item" onclick="setFilter('status','','All Statuses','ddStatus')">All Statuses</div>
+        <div class="filter-menu-divider"></div>
+        <div class="filter-menu-item" onclick="setFilter('status','connected','Connected','ddStatus')">Connected</div>
+        <div class="filter-menu-item" onclick="setFilter('status','voicemail','Voicemail','ddStatus')">Voicemail</div>
+        <div class="filter-menu-item" onclick="setFilter('status','busy','Busy','ddStatus')">Busy</div>
+        <div class="filter-menu-item" onclick="setFilter('status','not-answered','Not Answered','ddStatus')">Not Answered</div>
+        <div class="filter-menu-item" onclick="setFilter('status','call-failed','Call Failed','ddStatus')">Call Failed</div>
+      </div>
+    </div>
+    <button class="btn-download">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+  </div>
+
+  <table class="calls-table">
+    <thead>
+      <tr>
+        <th style="width:26%">Contact</th>
+        <th>Attempts</th>
+        <th>Last Contact</th>
+        <th>Last Call Status</th>
+        <th>Outcome</th>
+        <th style="width:40px"></th>
+      </tr>
+    </thead>
+    <tbody id="contactTableBody">
+
+      <!-- Ellie: VM → VM → Connected (outbound) -->
+      <tr style="cursor:pointer" data-outcome="qualified" data-status="connected" data-timeline="tl-ellie" onclick="toggleTimeline('tl-ellie', this.querySelector('.expand-btn'))">
+        <td>
+          <div class="cust-cell">
+            <div class="cust-avatar av-em">EM</div>
+            <div>
+              <div class="cust-name">Ellie Mayucorp</div>
+              <div class="cust-phone">+17186298584</div>
+              <div style="font-size:11px;color:#9ca3af;margin-top:2px;">Created Feb 1, 2026</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="att-count atc-done">3 / 3 attempts</span></td>
+        <td><div style="font-size:13px;color:#111827;font-weight:500;">Feb 4, 2026</div><div style="font-size:11.5px;color:#9ca3af;">6:10 PM · 1m 25s</div></td>
+        <td><span class="att-chip ac-connected">Connected</span></td>
+        <td><span class="cs-badge cs-qualified">Lead Qualified</span></td>
+        <td><button class="expand-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button></td>
+      </tr>
+      <tr id="tl-ellie" class="timeline-row tl-hidden">
+        <td colspan="6">
+          <div class="timeline-wrap">
+            <div class="tl-heading">Call History</div>
+            <div class="timeline">
+              <div class="tl-event">
+                <div class="tl-dot td-voicemail"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Call</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 2, 2026 · 2:10 PM · 0m 22s</div>
+                  <span class="tl-outcome">Voicemail</span>
+                </div>
+              </div>
+              <div class="tl-event">
+                <div class="tl-dot td-voicemail"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Retry</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 3, 2026 · 10:00 AM · 0m 18s</div>
+                  <span class="tl-outcome">Voicemail</span>
+                </div>
+              </div>
+              <div class="tl-event">
+                <div class="tl-dot td-connected"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">2nd Retry</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 4, 2026 · 6:10 PM · 1m 25s</div>
+                  <span class="tl-outcome">Connected · Follow-up Required</span><br>
+                  <button class="tl-transcript-link" onclick="openTranscript(event,'Ellie Mayucorp','2nd Retry — Feb 4, 2026 · 6:10 PM · 1m 25s')">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    View Transcript
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      <!-- James: VM → VM → Inbound call (customer called back, cancels retry 2) -->
+      <tr style="cursor:pointer" data-outcome="qualified" data-status="connected" data-timeline="tl-james" onclick="toggleTimeline('tl-james', this.querySelector('.expand-btn'))">
+        <td>
+          <div class="cust-cell">
+            <div class="cust-avatar av-u">JP</div>
+            <div>
+              <div class="cust-name">James Patterson</div>
+              <div class="cust-phone">+13475576000</div>
+              <div style="font-size:11px;color:#9ca3af;margin-top:2px;">Created Feb 1, 2026</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="att-count atc-done">2 / 3 attempts</span></td>
+        <td><div style="font-size:13px;color:#111827;font-weight:500;">Feb 4, 2026</div><div style="font-size:11.5px;color:#9ca3af;">3:45 PM · 2m 10s</div></td>
+        <td><div style="display:flex;flex-direction:column;gap:4px;"><span class="att-chip ac-connected">Connected</span><span class="att-chip" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">↩ Inbound</span></div></td>
+        <td><span class="cs-badge cs-qualified">Lead Qualified</span></td>
+        <td><button class="expand-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button></td>
+      </tr>
+      <tr id="tl-james" class="timeline-row tl-hidden">
+        <td colspan="6">
+          <div class="timeline-wrap">
+            <div class="tl-heading">Call History</div>
+            <div class="timeline">
+              <div class="tl-event">
+                <div class="tl-dot td-voicemail"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Call</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 2, 2026 · 2:02 PM · 0m 24s</div>
+                  <span class="tl-outcome">Voicemail</span>
+                </div>
+              </div>
+              <div class="tl-event">
+                <div class="tl-dot td-voicemail"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Retry</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 3, 2026 · 11:00 AM · 0m 20s</div>
+                  <span class="tl-outcome">Voicemail</span>
+                </div>
+              </div>
+              <div class="tl-event">
+                <div class="tl-dot td-inbound"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">Customer Called Back</span><span class="tl-tag tt-inbound">↩ Inbound</span></div>
+                  <div class="tl-meta">Feb 4, 2026 · 3:45 PM · 2m 10s</div>
+                  <span class="tl-outcome">Connected · Interested — Demo Scheduled</span>
+                  <div class="tl-inbound-note">Retry 2 (scheduled Feb 5) was automatically cancelled when inbound call was received.</div>
+                  <button class="tl-transcript-link" onclick="openTranscript(event,'James Patterson','Inbound — Feb 4, 2026 · 3:45 PM · 2m 10s')">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    View Transcript
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Priya: Busy → Connected -->
+      <tr style="cursor:pointer" data-outcome="not-qualified" data-status="connected" data-timeline="tl-priya" onclick="toggleTimeline('tl-priya', this.querySelector('.expand-btn'))">
+        <td>
+          <div class="cust-cell">
+            <div class="cust-avatar av-u">PS</div>
+            <div>
+              <div class="cust-name">Priya Sharma</div>
+              <div class="cust-phone">+19174056684</div>
+              <div style="font-size:11px;color:#9ca3af;margin-top:2px;">Created Feb 1, 2026</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="att-count atc-done">2 / 3 attempts</span></td>
+        <td><div style="font-size:13px;color:#111827;font-weight:500;">Feb 3, 2026</div><div style="font-size:11.5px;color:#9ca3af;">2:00 PM · 1m 12s</div></td>
+        <td><span class="att-chip ac-connected">Connected</span></td>
+        <td><span class="cs-badge cs-not-reached">Not Qualified</span></td>
+        <td><button class="expand-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button></td>
+      </tr>
+      <tr id="tl-priya" class="timeline-row tl-hidden">
+        <td colspan="6">
+          <div class="timeline-wrap">
+            <div class="tl-heading">Call History</div>
+            <div class="timeline">
+              <div class="tl-event">
+                <div class="tl-dot td-busy"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Call</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 2, 2026 · 12:02 PM · 0m 5s</div>
+                  <span class="tl-outcome">Busy</span>
+                </div>
+              </div>
+              <div class="tl-event">
+                <div class="tl-dot td-connected"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Retry</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 3, 2026 · 2:00 PM · 1m 12s</div>
+                  <span class="tl-outcome">Connected · General Information Shared</span><br>
+                  <button class="tl-transcript-link" onclick="openTranscript(event,'Priya Sharma','1st Retry — Feb 3, 2026 · 2:00 PM · 1m 12s')">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    View Transcript
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Rahul: VM → VM → Retry scheduled -->
+      <tr style="cursor:pointer" data-outcome="not-qualified" data-status="voicemail" data-timeline="tl-rahul" onclick="toggleTimeline('tl-rahul', this.querySelector('.expand-btn'))">
+        <td>
+          <div class="cust-cell">
+            <div class="cust-avatar av-u">RV</div>
+            <div>
+              <div class="cust-name">Rahul Verma</div>
+              <div class="cust-phone">+19179156226</div>
+              <div style="font-size:11px;color:#9ca3af;margin-top:2px;">Created Feb 1, 2026</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="att-count atc-pending">2 / 3 attempts</span></td>
+        <td><div style="font-size:13px;color:#111827;font-weight:500;">Feb 3, 2026</div><div style="font-size:11.5px;color:#9ca3af;">10:30 AM · 0m 19s</div></td>
+        <td><span class="att-chip ac-voicemail">Voicemail</span></td>
+        <td><span class="cs-badge cs-not-reached">Not Qualified</span></td>
+        <td><button class="expand-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button></td>
+      </tr>
+      <tr id="tl-rahul" class="timeline-row tl-hidden">
+        <td colspan="6">
+          <div class="timeline-wrap">
+            <div class="tl-heading">Call History</div>
+            <div class="timeline">
+              <div class="tl-event">
+                <div class="tl-dot td-voicemail"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Call</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 2, 2026 · 12:02 PM · 0m 22s</div>
+                  <span class="tl-outcome">Voicemail</span>
+                </div>
+              </div>
+              <div class="tl-event">
+                <div class="tl-dot td-voicemail"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Retry</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 3, 2026 · 10:30 AM · 0m 19s</div>
+                  <span class="tl-outcome">Voicemail</span>
+                </div>
+              </div>
+              <div class="tl-event">
+                <div class="tl-dot td-pending"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">2nd Retry</span><span class="tl-tag tt-pending">Scheduled</span></div>
+                  <div class="tl-meta">Feb 5, 2026 · 11:00 AM</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Dennis: Connected on 1st call -->
+      <tr style="cursor:pointer" data-outcome="qualified" data-status="connected" data-timeline="tl-dennis" onclick="toggleTimeline('tl-dennis', this.querySelector('.expand-btn'))">
+        <td>
+          <div class="cust-cell">
+            <div class="cust-avatar av-dl">DL</div>
+            <div>
+              <div class="cust-name">Dennis Liang</div>
+              <div class="cust-phone">+19174329225</div>
+              <div style="font-size:11px;color:#9ca3af;margin-top:2px;">Created Jan 31, 2026</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="att-count atc-done">1 / 3 attempts</span></td>
+        <td><div style="font-size:13px;color:#111827;font-weight:500;">Feb 1, 2026</div><div style="font-size:11.5px;color:#9ca3af;">12:01 PM · 1m 34s</div></td>
+        <td><span class="att-chip ac-connected">Connected</span></td>
+        <td><span class="cs-badge cs-qualified">Lead Qualified</span></td>
+        <td><button class="expand-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button></td>
+      </tr>
+      <tr id="tl-dennis" class="timeline-row tl-hidden">
+        <td colspan="6">
+          <div class="timeline-wrap">
+            <div class="tl-heading">Call History</div>
+            <div class="timeline">
+              <div class="tl-event">
+                <div class="tl-dot td-connected"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Call</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 1, 2026 · 12:01 PM · 1m 34s</div>
+                  <span class="tl-outcome">Connected · General Information Shared</span><br>
+                  <button class="tl-transcript-link" onclick="openTranscript(event,'Dennis','1st Call — Feb 1, 2026 · 12:01 PM · 1m 34s')">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    View Transcript
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Sofia: VM → Connected -->
+      <tr style="cursor:pointer" data-outcome="not-qualified" data-status="connected" data-timeline="tl-sofia" onclick="toggleTimeline('tl-sofia', this.querySelector('.expand-btn'))">
+        <td>
+          <div class="cust-cell">
+            <div class="cust-avatar av-s">SF</div>
+            <div>
+              <div class="cust-name">Sofia</div>
+              <div class="cust-phone">+19299908326</div>
+              <div style="font-size:11px;color:#9ca3af;margin-top:2px;">Created Jan 31, 2026</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="att-count atc-done">2 / 3 attempts</span></td>
+        <td><div style="font-size:13px;color:#111827;font-weight:500;">Feb 1, 2026</div><div style="font-size:11.5px;color:#9ca3af;">12:00 PM · 0m 46s</div></td>
+        <td><span class="att-chip ac-connected">Connected</span></td>
+        <td><span class="cs-badge cs-not-reached">Not Qualified</span></td>
+        <td><button class="expand-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button></td>
+      </tr>
+      <tr id="tl-sofia" class="timeline-row tl-hidden">
+        <td colspan="6">
+          <div class="timeline-wrap">
+            <div class="tl-heading">Call History</div>
+            <div class="timeline">
+              <div class="tl-event">
+                <div class="tl-dot td-voicemail"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Call</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Jan 31, 2026 · 9:00 AM · 0m 20s</div>
+                  <span class="tl-outcome">Voicemail</span>
+                </div>
+              </div>
+              <div class="tl-event">
+                <div class="tl-dot td-connected"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Retry</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 1, 2026 · 12:00 PM · 0m 46s</div>
+                  <span class="tl-outcome">Connected · Schedule Recall</span><br>
+                  <button class="tl-transcript-link" onclick="openTranscript(event,'Sofia','1st Retry — Feb 1, 2026 · 12:00 PM · 0m 46s')">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    View Transcript
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Ananya: Call Failed → Retry pending -->
+      <tr style="cursor:pointer" data-outcome="not-qualified" data-status="call-failed" data-timeline="tl-ananya" onclick="toggleTimeline('tl-ananya', this.querySelector('.expand-btn'))">
+        <td>
+          <div class="cust-cell">
+            <div class="cust-avatar av-u" style="background:#fce7f3;color:#9d174d;">AM</div>
+            <div>
+              <div class="cust-name">Ananya Mehta</div>
+              <div class="cust-phone">+91-9812345670</div>
+              <div style="font-size:11px;color:#9ca3af;margin-top:2px;">Created Feb 5, 2026</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="att-count atc-pending">1 / 3 attempts</span></td>
+        <td><div style="font-size:13px;color:#111827;font-weight:500;">Feb 5, 2026</div><div style="font-size:11.5px;color:#9ca3af;">11:00 AM · 0m 0s</div></td>
+        <td><span class="att-chip" style="background:#fff1f2;color:#be123c;border:1px solid #fecdd3;">Call Failed</span></td>
+        <td><span class="cs-badge cs-not-reached">Not Qualified</span></td>
+        <td><button class="expand-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button></td>
+      </tr>
+      <tr id="tl-ananya" class="timeline-row tl-hidden">
+        <td colspan="6">
+          <div class="timeline-wrap">
+            <div class="tl-heading">Call History</div>
+            <div class="timeline">
+              <div class="tl-event">
+                <div class="tl-dot" style="background:#ef4444;box-shadow:0 0 0 3px #fee2e2;"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Call</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 5, 2026 · 11:00 AM · 0m 0s</div>
+                  <span class="tl-outcome">Call Failed — Network Error</span>
+                </div>
+              </div>
+              <div class="tl-event">
+                <div class="tl-dot td-pending"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Retry</span><span class="tl-tag tt-pending">Scheduled</span></div>
+                  <div class="tl-meta">Feb 6, 2026 · 10:00 AM</div>
+                  <span class="tl-outcome" style="background:#fef3c7;color:#92400e;">Pending</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Vikram: Busy → Busy → Connected -->
+      <tr style="cursor:pointer" data-outcome="qualified" data-status="connected" data-timeline="tl-vikram" onclick="toggleTimeline('tl-vikram', this.querySelector('.expand-btn'))">
+        <td>
+          <div class="cust-cell">
+            <div class="cust-avatar av-u" style="background:#ede9fe;color:#5b21b6;">VS</div>
+            <div>
+              <div class="cust-name">Vikram Singh</div>
+              <div class="cust-phone">+91-9876543210</div>
+              <div style="font-size:11px;color:#9ca3af;margin-top:2px;">Created Feb 3, 2026</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="att-count atc-done">3 / 3 attempts</span></td>
+        <td><div style="font-size:13px;color:#111827;font-weight:500;">Feb 5, 2026</div><div style="font-size:11.5px;color:#9ca3af;">4:30 PM · 2m 05s</div></td>
+        <td><span class="att-chip ac-connected">Connected</span></td>
+        <td><span class="cs-badge cs-qualified">Lead Qualified</span></td>
+        <td><button class="expand-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button></td>
+      </tr>
+      <tr id="tl-vikram" class="timeline-row tl-hidden">
+        <td colspan="6">
+          <div class="timeline-wrap">
+            <div class="tl-heading">Call History</div>
+            <div class="timeline">
+              <div class="tl-event">
+                <div class="tl-dot td-busy"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Call</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 3, 2026 · 9:00 AM · 0m 4s</div>
+                  <span class="tl-outcome">Busy</span>
+                </div>
+              </div>
+              <div class="tl-event">
+                <div class="tl-dot td-busy"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Retry</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 4, 2026 · 11:00 AM · 0m 3s</div>
+                  <span class="tl-outcome">Busy</span>
+                </div>
+              </div>
+              <div class="tl-event">
+                <div class="tl-dot td-connected"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">2nd Retry</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 5, 2026 · 4:30 PM · 2m 05s</div>
+                  <span class="tl-outcome">Connected · Interested — Brochure Sent</span><br>
+                  <button class="tl-transcript-link" onclick="openTranscript(event,'Vikram Singh','2nd Retry — Feb 5, 2026 · 4:30 PM · 2m 05s')">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    View Transcript
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Meera: Not Answered × 3 -->
+      <tr style="cursor:pointer" data-outcome="not-qualified" data-status="not-answered" data-timeline="tl-meera" onclick="toggleTimeline('tl-meera', this.querySelector('.expand-btn'))">
+        <td>
+          <div class="cust-cell">
+            <div class="cust-avatar av-u" style="background:#fef9c3;color:#854d0e;">MK</div>
+            <div>
+              <div class="cust-name">Meera Kapoor</div>
+              <div class="cust-phone">+91-9090909090</div>
+              <div style="font-size:11px;color:#9ca3af;margin-top:2px;">Created Feb 2, 2026</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="att-count atc-done">3 / 3 attempts</span></td>
+        <td><div style="font-size:13px;color:#111827;font-weight:500;">Feb 4, 2026</div><div style="font-size:11.5px;color:#9ca3af;">2:00 PM · 0m 0s</div></td>
+        <td><span class="att-chip ac-voicemail">Not Answered</span></td>
+        <td><span class="cs-badge cs-not-reached">Not Qualified</span></td>
+        <td><button class="expand-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button></td>
+      </tr>
+      <tr id="tl-meera" class="timeline-row tl-hidden">
+        <td colspan="6">
+          <div class="timeline-wrap">
+            <div class="tl-heading">Call History</div>
+            <div class="timeline">
+              <div class="tl-event">
+                <div class="tl-dot td-voicemail"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Call</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 2, 2026 · 10:00 AM · 0m 0s</div>
+                  <span class="tl-outcome">Not Answered</span>
+                </div>
+              </div>
+              <div class="tl-event">
+                <div class="tl-dot td-voicemail"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Retry</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 3, 2026 · 12:00 PM · 0m 0s</div>
+                  <span class="tl-outcome">Not Answered</span>
+                </div>
+              </div>
+              <div class="tl-event">
+                <div class="tl-dot td-voicemail"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">2nd Retry</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 4, 2026 · 2:00 PM · 0m 0s</div>
+                  <span class="tl-outcome">Not Answered — Max retries reached</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      <!-- Arjun: Voicemail → Inbound callback -->
+      <tr style="cursor:pointer" data-outcome="qualified" data-status="connected" data-timeline="tl-arjun" onclick="toggleTimeline('tl-arjun', this.querySelector('.expand-btn'))">
+        <td>
+          <div class="cust-cell">
+            <div class="cust-avatar av-u" style="background:#ecfdf5;color:#065f46;">AR</div>
+            <div>
+              <div class="cust-name">Arjun Rao</div>
+              <div class="cust-phone">+91-9123456789</div>
+              <div style="font-size:11px;color:#9ca3af;margin-top:2px;">Created Feb 4, 2026</div>
+            </div>
+          </div>
+        </td>
+        <td><span class="att-count atc-done">1 / 3 attempts</span></td>
+        <td><div style="font-size:13px;color:#111827;font-weight:500;">Feb 5, 2026</div><div style="font-size:11.5px;color:#9ca3af;">9:15 AM · 3m 40s</div></td>
+        <td><div style="display:flex;flex-direction:column;gap:4px;"><span class="att-chip ac-connected">Connected</span><span class="att-chip" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">↩ Inbound</span></div></td>
+        <td><span class="cs-badge cs-qualified">Lead Qualified</span></td>
+        <td><button class="expand-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></button></td>
+      </tr>
+      <tr id="tl-arjun" class="timeline-row tl-hidden">
+        <td colspan="6">
+          <div class="timeline-wrap">
+            <div class="tl-heading">Call History</div>
+            <div class="timeline">
+              <div class="tl-event">
+                <div class="tl-dot td-voicemail"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">1st Call</span><span class="tl-tag tt-outbound">Outbound</span></div>
+                  <div class="tl-meta">Feb 4, 2026 · 3:00 PM · 0m 22s</div>
+                  <span class="tl-outcome">Voicemail</span>
+                </div>
+              </div>
+              <div class="tl-event">
+                <div class="tl-dot td-inbound"></div>
+                <div class="tl-body">
+                  <div class="tl-top"><span class="tl-label">Customer Called Back</span><span class="tl-tag tt-inbound">↩ Inbound</span></div>
+                  <div class="tl-meta">Feb 5, 2026 · 9:15 AM · 3m 40s</div>
+                  <span class="tl-outcome">Connected · Admission Form Requested</span>
+                  <div class="tl-inbound-note">1st Retry (scheduled Feb 6) was automatically cancelled when inbound call was received.</div>
+                  <button class="tl-transcript-link" onclick="openTranscript(event,'Arjun Rao','Inbound — Feb 5, 2026 · 9:15 AM · 3m 40s')">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    View Transcript
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+
+    </tbody>
+  </table>
+  </div><!-- /section-card Contacts Overview -->
+
+</div>
+</div><!-- /t2 -->
+
+<!-- ── Transcript Modal Overlay ── -->
+<div class="tr-overlay" id="trOverlay" onclick="closeTranscriptOnBackdrop(event)">
+  <div class="tr-modal" id="trModal">
+    <div class="tr-modal-header">
+      <div class="tr-modal-meta">
+        <div class="tr-modal-title" id="trModalTitle">Call Transcript</div>
+        <div class="tr-modal-sub" id="trModalSub"></div>
+      </div>
+      <button class="tr-close" onclick="closeTranscript()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="tr-tabs">
+      <button class="tr-tab active" onclick="switchTrTab('trSummary', this)">Summary</button>
+      <button class="tr-tab" onclick="switchTrTab('trRecording', this)">Recording</button>
+      <button class="tr-tab" onclick="switchTrTab('trTranscript', this)">Transcript</button>
+    </div>
+
+    <div class="tr-body">
+
+      <!-- Summary Pane -->
+      <div class="tr-pane active" id="trSummary">
+        <div class="tr-kv-row">
+          <div class="tr-kv">
+            <div class="tr-kv-label">Duration</div>
+            <div class="tr-kv-val" id="trDuration">1m 25s</div>
+          </div>
+          <div class="tr-kv">
+            <div class="tr-kv-label">Outcome</div>
+            <div class="tr-kv-val">Connected</div>
+          </div>
+          <div class="tr-kv">
+            <div class="tr-kv-label">Sentiment</div>
+            <div class="tr-kv-val"><span class="tr-sentiment positive">Positive</span></div>
+          </div>
+          <div class="tr-kv">
+            <div class="tr-kv-label">Talk Ratio</div>
+            <div class="tr-kv-val">Agent 62% · Contact 38%</div>
+          </div>
+        </div>
+        <div class="tr-summary-block">
+          <div class="tr-summary-label">Call Summary</div>
+          <div class="tr-summary-text">The AI agent reached the contact and introduced the LPU academic programme. The contact expressed interest in the MBA programme and asked about fee structure and scholarship eligibility. The agent provided relevant details and offered to schedule a follow-up demo with an admissions counsellor. The contact agreed and a slot was confirmed for Feb 6, 2026 at 11:00 AM.</div>
+        </div>
+        <div class="tr-summary-block">
+          <div class="tr-summary-label">Key Points</div>
+          <div class="tr-summary-text">
+            · Contact is interested in MBA (Marketing specialisation)<br>
+            · Asked about scholarship for working professionals<br>
+            · Demo scheduled for Feb 6, 2026 at 11:00 AM<br>
+            · Prefers communication via WhatsApp
+          </div>
+        </div>
+        <div class="tr-summary-block">
+          <div class="tr-summary-label">Next Action</div>
+          <div class="tr-summary-text">Send programme brochure on WhatsApp. Confirm demo appointment 1 hour before via SMS.</div>
+        </div>
+      </div>
+
+      <!-- Recording Pane -->
+      <div class="tr-pane" id="trRecording">
+        <div class="tr-recording-card">
+          <div class="tr-recording-top">
+            <button class="tr-play-btn" id="trPlayBtn" onclick="togglePlay()">
+              <svg id="trPlayIcon" width="18" height="18" viewBox="0 0 24 24" fill="#fff" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            </button>
+            <div class="tr-waveform" id="trWaveform"></div>
+          </div>
+          <div class="tr-recording-info">
+            <span class="tr-rec-dur">Duration: 1m 25s &nbsp;·&nbsp; Feb 4, 2026</span>
+            <button class="tr-download-btn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download Recording
+            </button>
+          </div>
+        </div>
+        <p style="font-size:12px;color:#94a3b8;margin-top:12px;text-align:center;">Audio playback is simulated in this prototype.</p>
+      </div>
+
+      <!-- Transcript Pane -->
+      <div class="tr-pane" id="trTranscript">
+        <div class="tr-transcript-search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Search transcript…">
+        </div>
+        <div class="tr-line agent">
+          <div class="tr-speaker-avatar tr-sa-agent">AI</div>
+          <div class="tr-bubble">
+            <div class="tr-speaker-name">Mio AI Agent</div>
+            <div class="tr-speech">Hello, am I speaking with the contact registered for the LPU programme enquiry?</div>
+            <div class="tr-timestamp">0:00</div>
+          </div>
+        </div>
+        <div class="tr-line">
+          <div class="tr-speaker-avatar tr-sa-contact">EM</div>
+          <div class="tr-bubble">
+            <div class="tr-speaker-name">Contact</div>
+            <div class="tr-speech">Yes, speaking. Who is this?</div>
+            <div class="tr-timestamp">0:05</div>
+          </div>
+        </div>
+        <div class="tr-line agent">
+          <div class="tr-speaker-avatar tr-sa-agent">AI</div>
+          <div class="tr-bubble">
+            <div class="tr-speaker-name">Mio AI Agent</div>
+            <div class="tr-speech">This is Mio, an AI assistant from LPU. You recently expressed interest in our postgraduate programmes. I wanted to share some information and see if we can answer any questions. Do you have a couple of minutes?</div>
+            <div class="tr-timestamp">0:07</div>
+          </div>
+        </div>
+        <div class="tr-line">
+          <div class="tr-speaker-avatar tr-sa-contact">EM</div>
+          <div class="tr-bubble">
+            <div class="tr-speaker-name">Contact</div>
+            <div class="tr-speech">Sure, yes. I was looking at the MBA programme. What's the fee structure like?</div>
+            <div class="tr-timestamp">0:21</div>
+          </div>
+        </div>
+        <div class="tr-line agent">
+          <div class="tr-speaker-avatar tr-sa-agent">AI</div>
+          <div class="tr-bubble">
+            <div class="tr-speaker-name">Mio AI Agent</div>
+            <div class="tr-speech">Great question. The LPU MBA programme has a tuition fee of ₹1.6 lakhs per semester. There are merit-based scholarships available for working professionals as well. Would you like me to have an admissions counsellor walk you through the eligibility criteria?</div>
+            <div class="tr-timestamp">0:27</div>
+          </div>
+        </div>
+        <div class="tr-line">
+          <div class="tr-speaker-avatar tr-sa-contact">EM</div>
+          <div class="tr-bubble">
+            <div class="tr-speaker-name">Contact</div>
+            <div class="tr-speech">Yes, that would be helpful. I'm currently working in marketing so I'd want the Marketing specialisation.</div>
+            <div class="tr-timestamp">0:48</div>
+          </div>
+        </div>
+        <div class="tr-line agent">
+          <div class="tr-speaker-avatar tr-sa-agent">AI</div>
+          <div class="tr-bubble">
+            <div class="tr-speaker-name">Mio AI Agent</div>
+            <div class="tr-speech">Noted — MBA with Marketing specialisation. I can schedule a 20-minute demo call with our admissions team. Would Feb 6th at 11:00 AM work for you?</div>
+            <div class="tr-timestamp">1:00</div>
+          </div>
+        </div>
+        <div class="tr-line">
+          <div class="tr-speaker-avatar tr-sa-contact">EM</div>
+          <div class="tr-bubble">
+            <div class="tr-speaker-name">Contact</div>
+            <div class="tr-speech">Yes, that works. Please send details on WhatsApp.</div>
+            <div class="tr-timestamp">1:14</div>
+          </div>
+        </div>
+        <div class="tr-line agent">
+          <div class="tr-speaker-avatar tr-sa-agent">AI</div>
+          <div class="tr-bubble">
+            <div class="tr-speaker-name">Mio AI Agent</div>
+            <div class="tr-speech">Perfect. I've scheduled the demo for Feb 6 at 11:00 AM and will send the programme brochure on WhatsApp. Thank you for your time. Have a great day!</div>
+            <div class="tr-timestamp">1:18</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ── Transcript Modal ── */
+  function openTranscript(e, contact, callMeta) {
+    e.stopPropagation();
+    document.getElementById('trModalTitle').textContent = contact;
+    document.getElementById('trModalSub').textContent = callMeta;
+    // reset to summary tab
+    switchTrTab('trSummary', document.querySelector('.tr-tab'));
+    // build waveform bars
+    const wf = document.getElementById('trWaveform');
+    wf.innerHTML = '';
+    const heights = [30,55,40,70,50,35,65,45,80,60,35,75,50,40,65,55,30,70,45,60,35,80,55,40,65,50,35,70,45,60];
+    heights.forEach((h, i) => {
+      const bar = document.createElement('div');
+      bar.className = 'tr-waveform-bar' + (i < 18 ? ' played' : '');
+      bar.style.height = h + '%';
+      wf.appendChild(bar);
+    });
+    document.getElementById('trOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeTranscript() {
+    document.getElementById('trOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function closeTranscriptOnBackdrop(e) {
+    if (e.target === document.getElementById('trOverlay')) closeTranscript();
+  }
+
+  let playing = false;
+  function togglePlay() {
+    playing = !playing;
+    document.getElementById('trPlayIcon').innerHTML = playing
+      ? '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>'
+      : '<polygon points="5 3 19 12 5 21 5 3"/>';
+  }
+
+  function switchTrTab(paneId, btn) {
+    document.querySelectorAll('.tr-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tr-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById(paneId).classList.add('active');
+    btn.classList.add('active');
+    playing = false;
+    const icon = document.getElementById('trPlayIcon');
+    if (icon) icon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeTranscript(); });
+
+  /* ── Filter chips ── */
+  function toggleSc(el) { el.classList.toggle('active'); }
+  function toggleOc(el) {
+    el.closest('.outcome-chips').querySelectorAll('.oc').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  /* ── Tab switching ── */
+  function toggleTimeline(id, btn) {
+    const row = document.getElementById(id);
+    const isHidden = row.classList.contains('tl-hidden');
+    row.classList.toggle('tl-hidden', !isHidden);
+    btn.classList.toggle('open', isHidden);
+  }
+
+  function switchTab(id, btn) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  /* ── Tab 1 retry logic ── */
+  const WINDOW_START = 9*60, WINDOW_END = 21*60;
+  let retryEnabled = true, currentCount = 3;
+  const cardState = [
+    {val:30,unit:'minutes',dayTime:'13:00'},  // 1st retry: 30 mins after initial call
+    {val:4,unit:'hours',dayTime:'13:00'},     // 2nd retry: 4 hours after 1st retry
+    {val:1,unit:'days',dayTime:'13:00'},      // 3rd retry: 1 day after 2nd retry at 1:00 PM
+    {val:1,unit:'days',dayTime:'13:00'},
+    {val:1,unit:'days',dayTime:'13:00'},
+  ];
+
+  function ordinal(n){const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+  function buildTimeOptions(sel){
+    let h='';
+    for(let m=9*60;m<=21*60;m+=30){
+      const h24=Math.floor(m/60),mm=m%60,v=`${String(h24).padStart(2,'0')}:${String(mm).padStart(2,'0')}`,ampm=h24>=12?'PM':'AM',h12=h24%12||12;
+      h+=`<option value="${v}"${v===sel?' selected':''}>${h12}:${String(mm).padStart(2,'0')} ${ampm}</option>`;
+    }
+    return h;
+  }
+  function fmtTime(m){const h24=Math.floor(m/60)%24,mm=m%60,ampm=h24>=12?'PM':'AM',h12=h24%12||12;return `${h12}:${String(mm).padStart(2,'0')} ${ampm}`;}
+  function validateCard(i){
+    const s=cardState[i],prev=i===0?'initial call':`${ordinal(i)} Retry`;
+    if(s.unit==='days'){
+      const[h,m]=s.dayTime.split(':').map(Number),mins=h*60+m,ok=mins>=WINDOW_START&&mins<WINDOW_END;
+      const lbl=`${s.val===1?'1 day':s.val+' days'} after ${prev}`;
+      return ok?{valid:true,scheduledLabel:`${lbl} at ${fmtTime(mins)}`,msg:''}:{valid:false,scheduledLabel:`${lbl} at ${fmtTime(mins)}`,msg:`${fmtTime(mins)} is outside allowed hours. Pick a time between 9:00 AM and 9:00 PM.`};
+    }
+    return{valid:true,scheduledLabel:`${s.val} ${s.unit} after ${i===0?'initial call':ordinal(i)+' Retry'}`,msg:''};
+  }
+  function onRetryToggle(en){retryEnabled=en;document.getElementById('retryBody').classList.toggle('hidden',!en);if(en)rebuildCards();updateStartBtn();}
+  function selectCount(n,el){currentCount=n;document.querySelectorAll('.count-pill').forEach(p=>p.classList.remove('active'));el.classList.add('active');rebuildCards();}
+  function rebuildCards(){
+    const c=document.getElementById('retryCards');c.innerHTML='';
+    for(let i=0;i<currentCount;i++){
+      if(i>0){const conn=document.createElement('div');conn.className='connector';conn.innerHTML=`<div class="conn-line"></div><div class="conn-pill">&#x2193; If ${ordinal(i)} Retry also unanswered</div><div class="conn-line"></div>`;c.appendChild(conn);}
+      const s=cardState[i],v=validateCard(i);
+      const unitOpts=['minutes','hours','days'].map(u=>`<option value="${u}"${u===s.unit?' selected':''}>${u[0].toUpperCase()+u.slice(1)}</option>`).join('');
+      const afterLbl=i===0?'of the initial call':`after ${ordinal(i)} Retry`;
+      const dayBlock=s.unit==='days'?`<div class="dt-wrap"><span class="dt-label">&#128197; At what time on ${s.val===1?'the next day':'day '+s.val}?</span><select class="dt-select" onchange="cardState[${i}].dayTime=this.value;rebuildCards()">${buildTimeOptions(s.dayTime)}</select></div>`:'';
+      const badge=v.scheduledLabel?`<div class="sched-badge ${v.valid?'valid':'invalid'}">${v.valid?'&#10003;':'&#10007;'} ${v.scheduledLabel}</div>`:'';
+      const err=!v.valid?`<div class="err-block">&#9940; ${v.msg}</div>`:'';
+      const card=document.createElement('div');
+      card.className=`retry-card${v.valid?' is-valid':' has-error'}`;
+      card.innerHTML=`<div class="rc-head"><div class="rc-num">${i+1}</div><div><div class="rc-title">${ordinal(i+1)} Retry</div><div class="rc-sub">After ${i===0?'initial call':ordinal(i)+' Retry'} is not connected</div></div></div><p class="int-label">${ordinal(i+1)} Retry after</p><div class="int-row"><input class="int-num" type="number" min="1" value="${s.val}" oninput="cardState[${i}].val=Math.max(1,+this.value||1);rebuildCards()"/><select class="int-sel" onchange="cardState[${i}].unit=this.value;rebuildCards()">${unitOpts}</select><span class="int-after">${afterLbl}</span></div>${dayBlock}${badge}${err}`;
+      c.appendChild(card);
+    }
+    updateStartBtn();
+  }
+  function updateStartBtn(){
+    const name=(document.getElementById('campaignName').value||'').trim(),type=document.getElementById('campaignType').value;
+    let ok=true;if(retryEnabled)for(let i=0;i<currentCount;i++)if(!validateCard(i).valid){ok=false;break;}
+    document.getElementById('startBtn').disabled=!(name&&type&&ok);
+  }
+  function handleStart(){alert('Campaign started!');}
+  rebuildCards();
+  updateStartBtn();
+
+  /* ── Copy to clipboard ── */
+  function copyText(text, el) {
+    navigator.clipboard.writeText(text).then(() => {
+      el.classList.add('copied');
+      const orig = el.innerHTML;
+      el.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
+      setTimeout(() => { el.classList.remove('copied'); el.innerHTML = orig; }, 1800);
+    });
+  }
+
+  /* ── Table Filters ── */
+  let activeOutcome = '', activeStatus = '';
+
+  function toggleFilterDD(id) {
+    const dd = document.getElementById(id);
+    const wasOpen = dd.classList.contains('open');
+    document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.remove('open'));
+    if (!wasOpen) dd.classList.add('open');
+  }
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.filter-dropdown')) {
+      document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.remove('open'));
+    }
+  });
+
+  function setFilter(type, value, label, ddId) {
+    const dd = document.getElementById(ddId);
+    dd.querySelectorAll('.filter-menu-item').forEach(i => i.classList.remove('selected'));
+    if (value) dd.querySelector(`.filter-menu-item[onclick*="${value}"]`).classList.add('selected');
+    dd.querySelector('.filter-label').textContent = label;
+    dd.querySelector('.filter-btn').classList.toggle('has-filter', !!value);
+    if (type === 'outcome') activeOutcome = value;
+    else activeStatus = value;
+    dd.classList.remove('open');
+    applyFilters();
+  }
+
+  function applyFilters() {
+    document.querySelectorAll('#contactTableBody tr[data-outcome]').forEach(row => {
+      const tlRow = document.getElementById(row.dataset.timeline);
+      const show = (!activeOutcome || row.dataset.outcome === activeOutcome) &&
+                   (!activeStatus  || row.dataset.status  === activeStatus);
+      row.style.display = show ? '' : 'none';
+      if (tlRow && !show) { tlRow.style.display = 'none'; tlRow.classList.add('tl-hidden'); }
+    });
+  }
+</script>
+
+</div><!-- /page-body -->
+</div><!-- /app-shell -->
+</body>
+</html>
