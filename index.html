@@ -2171,31 +2171,46 @@
     if (!c) return;
     c.innerHTML = '';
     for (let i = 0; i < t3Count; i++) {
+      // Connector between cards
+      if (i > 0) {
+        const conn = document.createElement('div');
+        conn.className = 'connector';
+        conn.innerHTML = `<div class="conn-line"></div><div class="conn-pill">&#x2193; If ${t3Ordinal(i)} Retry also unanswered</div><div class="conn-line"></div>`;
+        c.appendChild(conn);
+      }
       const s = t3State[i];
-      const afterLbl = i === 0 ? 'of initial call' : `after ${t3Ordinal(i)} Retry`;
-      const timeBlock = s.unit === 'days' ? `
-        <div class="af-time-row">
-          <span class="af-time-lbl">📅 At time:</span>
-          <select class="af-time-sel" onchange="t3State[${i}].dayTime=this.value;t3Build()">
-            ${t3TimeOpts(s.dayTime)}
-          </select>
-        </div>` : '';
-      const units = ['minutes','hours','days'].map(u => `<option value="${u}"${u===s.unit?' selected':''}>${u[0].toUpperCase()+u.slice(1)}</option>`).join('');
+      const prev = i === 0 ? 'initial call' : `${t3Ordinal(i)} Retry`;
+      const afterLbl = i === 0 ? 'of the initial call' : `after ${t3Ordinal(i)} Retry`;
+      const unitOpts = ['minutes','hours','days'].map(u => `<option value="${u}"${u===s.unit?' selected':''}>${u[0].toUpperCase()+u.slice(1)}</option>`).join('');
+      const dayBlock = s.unit === 'days' ? `<div class="dt-wrap"><span class="dt-label">&#128197; At what time on ${s.val===1?'the next day':'day '+s.val}?</span><select class="dt-select" onchange="t3State[${i}].dayTime=this.value;t3Build()">${t3TimeOpts(s.dayTime)}</select></div>` : '';
+      // Schedule label
+      let schedLabel = '';
+      if (s.unit === 'days') {
+        const [h,m] = s.dayTime.split(':').map(Number), mins = h*60+m, ok = mins>=WINDOW_START&&mins<WINDOW_END;
+        const lbl = `${s.val===1?'1 day':s.val+' days'} after ${prev}`;
+        schedLabel = ok
+          ? `<div class="sched-badge valid">&#10003; ${lbl} at ${fmtTime(mins)}</div>`
+          : `<div class="sched-badge invalid">&#10007; ${lbl} at ${fmtTime(mins)}</div><div class="err-block">&#9940; ${fmtTime(mins)} is outside allowed hours. Pick a time between 9:00 AM and 9:00 PM.</div>`;
+      } else {
+        schedLabel = `<div class="sched-badge valid">&#10003; ${s.val} ${s.unit} after ${i===0?'initial call':t3Ordinal(i)+' Retry'}</div>`;
+      }
       const card = document.createElement('div');
-      card.className = 'af-retry-card';
+      card.className = 'retry-card is-valid';
       card.innerHTML = `
-        <div class="af-retry-card-hdr">
-          <div class="af-retry-num">${i+1}</div>
+        <div class="rc-head">
+          <div class="rc-num">${i+1}</div>
           <div>
-            <div class="af-retry-name">${t3Ordinal(i+1)} Retry</div>
-            <div class="af-retry-after">After ${i===0?'initial call':t3Ordinal(i)+' Retry'} — not connected</div>
+            <div class="rc-title">${t3Ordinal(i+1)} Retry</div>
+            <div class="rc-sub">After ${i===0?'initial call':t3Ordinal(i)+' Retry'} is not connected</div>
           </div>
         </div>
-        <div class="af-int-row">
-          <input class="af-int-num" type="number" min="1" value="${s.val}" oninput="t3State[${i}].val=Math.max(1,+this.value||1);t3Build()"/>
-          <select class="af-int-sel" onchange="t3State[${i}].unit=this.value;t3Build()">${units}</select>
-          <span class="af-int-after">${afterLbl}</span>
-        </div>${timeBlock}`;
+        <p class="int-label">${t3Ordinal(i+1)} Retry after</p>
+        <div class="int-row">
+          <input class="int-num" type="number" min="1" value="${s.val}" oninput="t3State[${i}].val=Math.max(1,+this.value||1);t3Build()"/>
+          <select class="int-sel" onchange="t3State[${i}].unit=this.value;t3Build()">${unitOpts}</select>
+          <span class="int-after">${afterLbl}</span>
+        </div>
+        ${dayBlock}${schedLabel}`;
       c.appendChild(card);
     }
   }
