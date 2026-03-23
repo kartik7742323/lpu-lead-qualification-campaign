@@ -2093,6 +2093,7 @@
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(id).classList.add('active');
     btn.classList.add('active');
+    if (id === 't3') t3Build();
   }
 
   /* ── Tab 1 retry logic ── */
@@ -2163,61 +2164,69 @@
     {val:1,  unit:'days',    dayTime:'13:00'},
     {val:1,  unit:'days',    dayTime:'13:00'},
   ];
-  const t3Ordinal = n => { const s=['th','st','nd','rd'],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
-  const t3TimeOpts = sel => { let h=''; for(let m=9*60;m<=21*60;m+=30){ const h24=Math.floor(m/60),mm=m%60,v=`${String(h24).padStart(2,'0')}:${String(mm).padStart(2,'0')}`,ampm=h24>=12?'PM':'AM',h12=h24%12||12; h+=`<option value="${v}"${v===sel?' selected':''}>${h12}:${String(mm).padStart(2,'0')} ${ampm}</option>`; } return h; };
+
+  function t3Ord(n) { var s=['th','st','nd','rd'],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+  function t3Fmt(mins) { var h24=Math.floor(mins/60)%24,mm=mins%60,ampm=h24>=12?'PM':'AM',h12=h24%12||12; return h12+':'+(mm<10?'0':'')+mm+' '+ampm; }
+  function t3TimeOpts(sel) {
+    var out='';
+    for(var m=9*60; m<=21*60; m+=30){
+      var h24=Math.floor(m/60), mm=m%60;
+      var v=(h24<10?'0':'')+h24+':'+(mm<10?'0':'')+mm;
+      var ampm=h24>=12?'PM':'AM', h12=h24%12||12;
+      out+='<option value="'+v+'"'+(v===sel?' selected':'')+'>'+h12+':'+(mm<10?'0':'')+mm+' '+ampm+'</option>';
+    }
+    return out;
+  }
 
   function t3Build() {
-    const c = document.getElementById('t3RetryCards');
+    var c = document.getElementById('t3RetryCards');
     if (!c) return;
     c.innerHTML = '';
-    for (let i = 0; i < t3Count; i++) {
-      // Connector between cards
+    for (var i = 0; i < t3Count; i++) {
       if (i > 0) {
-        const conn = document.createElement('div');
+        var conn = document.createElement('div');
         conn.className = 'connector';
-        conn.innerHTML = `<div class="conn-line"></div><div class="conn-pill">&#x2193; If ${t3Ordinal(i)} Retry also unanswered</div><div class="conn-line"></div>`;
+        conn.innerHTML = '<div class="conn-line"></div><div class="conn-pill">↓ If '+t3Ord(i)+' Retry also unanswered</div><div class="conn-line"></div>';
         c.appendChild(conn);
       }
-      const s = t3State[i];
-      const prev = i === 0 ? 'initial call' : `${t3Ordinal(i)} Retry`;
-      const afterLbl = i === 0 ? 'of the initial call' : `after ${t3Ordinal(i)} Retry`;
-      const unitOpts = ['minutes','hours','days'].map(u => `<option value="${u}"${u===s.unit?' selected':''}>${u[0].toUpperCase()+u.slice(1)}</option>`).join('');
-      const dayBlock = s.unit === 'days' ? `<div class="dt-wrap"><span class="dt-label">&#128197; At what time on ${s.val===1?'the next day':'day '+s.val}?</span><select class="dt-select" onchange="t3State[${i}].dayTime=this.value;t3Build()">${t3TimeOpts(s.dayTime)}</select></div>` : '';
-      // Schedule label
-      let schedLabel = '';
+      var s = t3State[i];
+      var afterLbl = i===0 ? 'of the initial call' : 'after '+t3Ord(i)+' Retry';
+      var unitOpts = ['minutes','hours','days'].map(function(u){ return '<option value="'+u+'"'+(u===s.unit?' selected':'')+'>'+u[0].toUpperCase()+u.slice(1)+'</option>'; }).join('');
+
+      var dayBlock = '';
       if (s.unit === 'days') {
-        const [h,m] = s.dayTime.split(':').map(Number), mins = h*60+m, ok = mins>=WINDOW_START&&mins<WINDOW_END;
-        const lbl = `${s.val===1?'1 day':s.val+' days'} after ${prev}`;
-        schedLabel = ok
-          ? `<div class="sched-badge valid">&#10003; ${lbl} at ${fmtTime(mins)}</div>`
-          : `<div class="sched-badge invalid">&#10007; ${lbl} at ${fmtTime(mins)}</div><div class="err-block">&#9940; ${fmtTime(mins)} is outside allowed hours. Pick a time between 9:00 AM and 9:00 PM.</div>`;
-      } else {
-        schedLabel = `<div class="sched-badge valid">&#10003; ${s.val} ${s.unit} after ${i===0?'initial call':t3Ordinal(i)+' Retry'}</div>`;
+        dayBlock = '<div class="dt-wrap"><span class="dt-label">📅 At what time on '+(s.val===1?'the next day':'day '+s.val)+'?</span><select class="dt-select" onchange="t3State['+i+'].dayTime=this.value;t3Build()">'+t3TimeOpts(s.dayTime)+'</select></div>';
       }
-      const card = document.createElement('div');
+
+      var badge = '';
+      if (s.unit === 'days') {
+        var parts = s.dayTime.split(':'), hrs = parseInt(parts[0]), mns = parseInt(parts[1]);
+        var totalMins = hrs*60+mns, ok = totalMins>=540 && totalMins<1260;
+        var lbl = (s.val===1?'1 day':s.val+' days')+' after '+(i===0?'initial call':t3Ord(i)+' Retry');
+        badge = ok
+          ? '<div class="sched-badge valid">✓ '+lbl+' at '+t3Fmt(totalMins)+'</div>'
+          : '<div class="sched-badge invalid">✗ '+lbl+' at '+t3Fmt(totalMins)+'</div><div class="err-block">⛔ '+t3Fmt(totalMins)+' is outside allowed hours. Pick 9:00 AM – 9:00 PM.</div>';
+      } else {
+        badge = '<div class="sched-badge valid">✓ '+s.val+' '+s.unit+' after '+(i===0?'initial call':t3Ord(i)+' Retry')+'</div>';
+      }
+
+      var card = document.createElement('div');
       card.className = 'retry-card is-valid';
-      card.innerHTML = `
-        <div class="rc-head">
-          <div class="rc-num">${i+1}</div>
-          <div>
-            <div class="rc-title">${t3Ordinal(i+1)} Retry</div>
-            <div class="rc-sub">After ${i===0?'initial call':t3Ordinal(i)+' Retry'} is not connected</div>
-          </div>
-        </div>
-        <p class="int-label">${t3Ordinal(i+1)} Retry after</p>
-        <div class="int-row">
-          <input class="int-num" type="number" min="1" value="${s.val}" oninput="t3State[${i}].val=Math.max(1,+this.value||1);t3Build()"/>
-          <select class="int-sel" onchange="t3State[${i}].unit=this.value;t3Build()">${unitOpts}</select>
-          <span class="int-after">${afterLbl}</span>
-        </div>
-        ${dayBlock}${schedLabel}`;
+      card.innerHTML =
+        '<div class="rc-head"><div class="rc-num">'+(i+1)+'</div><div><div class="rc-title">'+t3Ord(i+1)+' Retry</div><div class="rc-sub">After '+(i===0?'initial call':t3Ord(i)+' Retry')+' is not connected</div></div></div>'+
+        '<p class="int-label">'+t3Ord(i+1)+' Retry after</p>'+
+        '<div class="int-row">'+
+          '<input class="int-num" type="number" min="1" value="'+s.val+'" oninput="t3State['+i+'].val=Math.max(1,+this.value||1);t3Build()"/>'+
+          '<select class="int-sel" onchange="t3State['+i+'].unit=this.value;t3Build()">'+unitOpts+'</select>'+
+          '<span class="int-after">'+afterLbl+'</span>'+
+        '</div>'+dayBlock+badge;
       c.appendChild(card);
     }
   }
 
   function t3SelectCount(n, el) {
     t3Count = n;
-    document.querySelectorAll('.af-pill').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.af-pill').forEach(function(p){ p.classList.remove('active'); });
     el.classList.add('active');
     t3Build();
   }
