@@ -2181,47 +2181,53 @@
   function t3Build() {
     var c = document.getElementById('t3RetryCards');
     if (!c) return;
-    c.innerHTML = '';
+    var html = '';
     for (var i = 0; i < t3Count; i++) {
-      if (i > 0) {
-        var conn = document.createElement('div');
-        conn.className = 'connector';
-        conn.innerHTML = '<div class="conn-line"></div><div class="conn-pill">↓ If '+t3Ord(i)+' Retry also unanswered</div><div class="conn-line"></div>';
-        c.appendChild(conn);
-      }
       var s = t3State[i];
       var afterLbl = i===0 ? 'of the initial call' : 'after '+t3Ord(i)+' Retry';
-      var unitOpts = ['minutes','hours','days'].map(function(u){ return '<option value="'+u+'"'+(u===s.unit?' selected':'')+'>'+u[0].toUpperCase()+u.slice(1)+'</option>'; }).join('');
+      var unitOpts =
+        '<option value="minutes"'+(s.unit==='minutes'?' selected':'')+'>Minutes</option>'+
+        '<option value="hours"'+(s.unit==='hours'?' selected':'')+'>Hours</option>'+
+        '<option value="days"'+(s.unit==='days'?' selected':'')+'>Days</option>';
 
       var dayBlock = '';
       if (s.unit === 'days') {
-        dayBlock = '<div class="dt-wrap"><span class="dt-label">📅 At what time on '+(s.val===1?'the next day':'day '+s.val)+'?</span><select class="dt-select" onchange="t3State['+i+'].dayTime=this.value;t3Build()">'+t3TimeOpts(s.dayTime)+'</select></div>';
+        dayBlock = '<div class="dt-wrap"><span class="dt-label">&#128197; At what time on '+(s.val===1?'the next day':'day '+s.val)+'?</span><select class="dt-select" onchange="t3State['+i+'].dayTime=this.value;t3Build()">'+t3TimeOpts(s.dayTime)+'</select></div>';
       }
 
       var badge = '';
       if (s.unit === 'days') {
-        var parts = s.dayTime.split(':'), hrs = parseInt(parts[0]), mns = parseInt(parts[1]);
-        var totalMins = hrs*60+mns, ok = totalMins>=540 && totalMins<1260;
+        var parts = s.dayTime.split(':');
+        var totalMins = parseInt(parts[0])*60 + parseInt(parts[1]);
+        var ok = totalMins>=540 && totalMins<1260;
         var lbl = (s.val===1?'1 day':s.val+' days')+' after '+(i===0?'initial call':t3Ord(i)+' Retry');
         badge = ok
-          ? '<div class="sched-badge valid">✓ '+lbl+' at '+t3Fmt(totalMins)+'</div>'
-          : '<div class="sched-badge invalid">✗ '+lbl+' at '+t3Fmt(totalMins)+'</div><div class="err-block">⛔ '+t3Fmt(totalMins)+' is outside allowed hours. Pick 9:00 AM – 9:00 PM.</div>';
+          ? '<div class="sched-badge valid">&#10003; '+lbl+' at '+t3Fmt(totalMins)+'</div>'
+          : '<div class="sched-badge invalid">&#10007; '+lbl+' at '+t3Fmt(totalMins)+'</div><div class="err-block">&#9940; Outside allowed hours (9AM-9PM).</div>';
       } else {
-        badge = '<div class="sched-badge valid">✓ '+s.val+' '+s.unit+' after '+(i===0?'initial call':t3Ord(i)+' Retry')+'</div>';
+        badge = '<div class="sched-badge valid">&#10003; '+s.val+' '+s.unit+' after '+(i===0?'initial call':t3Ord(i)+' Retry')+'</div>';
       }
 
-      var card = document.createElement('div');
-      card.className = 'retry-card is-valid';
-      card.innerHTML =
-        '<div class="rc-head"><div class="rc-num">'+(i+1)+'</div><div><div class="rc-title">'+t3Ord(i+1)+' Retry</div><div class="rc-sub">After '+(i===0?'initial call':t3Ord(i)+' Retry')+' is not connected</div></div></div>'+
-        '<p class="int-label">'+t3Ord(i+1)+' Retry after</p>'+
-        '<div class="int-row">'+
-          '<input class="int-num" type="number" min="1" value="'+s.val+'" oninput="t3State['+i+'].val=Math.max(1,+this.value||1);t3Build()"/>'+
-          '<select class="int-sel" onchange="t3State['+i+'].unit=this.value;t3Build()">'+unitOpts+'</select>'+
-          '<span class="int-after">'+afterLbl+'</span>'+
-        '</div>'+dayBlock+badge;
-      c.appendChild(card);
+      if (i > 0) {
+        html += '<div class="connector"><div class="conn-line"></div><div class="conn-pill">&#x2193; If '+t3Ord(i)+' Retry also unanswered</div><div class="conn-line"></div></div>';
+      }
+
+      html +=
+        '<div class="retry-card is-valid">'+
+          '<div class="rc-head"><div class="rc-num">'+(i+1)+'</div><div>'+
+            '<div class="rc-title">'+t3Ord(i+1)+' Retry</div>'+
+            '<div class="rc-sub">After '+(i===0?'initial call':t3Ord(i)+' Retry')+' is not connected</div>'+
+          '</div></div>'+
+          '<p class="int-label">'+t3Ord(i+1)+' Retry after</p>'+
+          '<div class="int-row">'+
+            '<input class="int-num" type="number" min="1" value="'+s.val+'" oninput="t3State['+i+'].val=Math.max(1,+this.value||1);t3Build()"/>'+
+            '<select class="int-sel" onchange="t3State['+i+'].unit=this.value;t3Build()">'+unitOpts+'</select>'+
+            '<span class="int-after">'+afterLbl+'</span>'+
+          '</div>'+
+          dayBlock+badge+
+        '</div>';
     }
+    c.innerHTML = html;
   }
 
   function t3SelectCount(n, el) {
